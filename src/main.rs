@@ -1,7 +1,7 @@
 use java_utils::HashCode;
 use std::num::Wrapping;
 
-const GRADIENTS: [[f64; 3]; 16] = [
+const NOISE_GRADIENTS: [[f64; 3]; 16] = [
     [1.0, 1.0, 0.0],
     [-1.0, 1.0, 0.0],
     [1.0, -1.0, 0.0],
@@ -19,6 +19,8 @@ const GRADIENTS: [[f64; 3]; 16] = [
     [-1.0, 1.0, 0.0],
     [0.0, -1.0, -1.0],
 ];
+
+const GEODE_SALT: i64 = 20002;
 
 struct BlockPos {
     x: i32,
@@ -240,7 +242,7 @@ impl PerlinNoiseSampler {
     }
 
     fn grad(&self, hash: i32, x: f64, y: f64, z: f64) -> f64 {
-        let gradient = GRADIENTS[(hash & 0xF) as usize];
+        let gradient = NOISE_GRADIENTS[(hash & 0xF) as usize];
         gradient[0] * x + gradient[1] * y + gradient[2] * z
     }
 
@@ -519,12 +521,12 @@ impl GeodeGenerator {
 }
 
 fn main() {
+    const SEED: i64 = 12345;
     const SEARCH_RADIUS: i64 = 10000;
-    const GEODE_SALT: i64 = 20002;
     const GEODE_THRESHOLD: i32 = 27;
     const BUDDING_THRESHOLD: i32 = 1000;
 
-    let mut finder = GeodeGenerator::new(-191766402516746766);
+    let mut finder = GeodeGenerator::new(SEED);
 
     let mut possible_locations: Vec<(i64, i64)> = vec![];
     for i in -SEARCH_RADIUS..SEARCH_RADIUS {
@@ -582,5 +584,3 @@ fn main() {
         }
     }
 }
-
-// TODO: Credit Wutax, noise_rs, MrSpike in repo
