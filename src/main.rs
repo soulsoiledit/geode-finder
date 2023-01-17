@@ -1,4 +1,5 @@
 use clap::Parser;
+use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
 use java_utils::HashCode;
 use std::num::Wrapping;
 
@@ -557,9 +558,18 @@ fn main() {
         }
     }
 
+    let search_diameter = search_radius * 2 + 1;
+    let progress_bar = ProgressBar::new(search_diameter as u64).with_style(
+        ProgressStyle::with_template(
+            "{spinner:.green} [{elapsed}] [{bar:.green/white}] ({eta_precise})",
+        )
+        .unwrap()
+        .progress_chars("ùwú"),
+    );
+
     let mut finder = GeodeGenerator::new(seed);
     let mut possible_locations: Vec<(i64, i64)> = vec![];
-    for i in (-search_radius..search_radius).progress_with(pb) {
+    for i in -search_radius..search_radius {
         let mut id = 0;
         let mut geode_count = [0; 15];
         let mut total_geodes = 0;
@@ -577,18 +587,16 @@ fn main() {
 
             total_geodes += geode_count[id];
 
-                println!(
-                    "Geode cluster with {total_geodes} geodes centered at {}, {}",
-                    (i + 7) * 16,
-                    (j - 7) * 16,
-                );
             if total_geodes >= geode_threshold {
                 possible_locations.push((i, j));
             }
 
             id = (id + 1) % 15;
         }
+
+        progress_bar.inc(1);
     }
+    progress_bar.finish();
 
     println!("{} possible locations found", possible_locations.len());
 
