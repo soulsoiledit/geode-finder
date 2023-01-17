@@ -1,3 +1,4 @@
+use clap::Parser;
 use java_utils::HashCode;
 use std::num::Wrapping;
 
@@ -55,6 +56,25 @@ struct GeodeGenerator {
     world_seed: i64,
     a: i64,
     b: i64,
+}
+
+#[derive(Parser, Debug)]
+#[command(author, version, about, long_about = None)]
+struct Args {
+    #[arg(short = 'v', long, default_value_t = String::from("1.18"))]
+    game_version: String,
+
+    #[arg(short = 's', long, default_value_t = 011377)]
+    seed: i64,
+
+    #[arg(short = 'r', long, default_value_t = 10000)]
+    search_radius: i64,
+
+    #[arg(short = 'g', long, default_value_t = 26)]
+    geode_threshold: i32,
+
+    #[arg(short = 'b', long, default_value_t = 1000)]
+    budding_threshold: i32,
 }
 
 impl BlockPos {
@@ -521,20 +541,30 @@ impl GeodeGenerator {
 }
 
 fn main() {
-    const SEED: i64 = 12345;
-    const SEARCH_RADIUS: i64 = 10000;
-    const GEODE_THRESHOLD: i32 = 27;
-    const BUDDING_THRESHOLD: i32 = 1000;
+    let args = Args::parse();
+    let seed = args.seed;
+    let search_radius = args.search_radius;
+    let geode_threshold = args.geode_threshold;
+    let budding_threshold = args.budding_threshold;
 
-    let mut finder = GeodeGenerator::new(SEED);
+    match args.game_version.as_str() {
+        "1.17" => {
+            println!("Version 1.17 is not supported (yet! :3)");
+            return;
+        }
+        _ => {
+            println!("Running geode finder for versions 1.18+...");
+        }
+    }
 
+    let mut finder = GeodeGenerator::new(seed);
     let mut possible_locations: Vec<(i64, i64)> = vec![];
-    for i in -SEARCH_RADIUS..SEARCH_RADIUS {
+    for i in (-search_radius..search_radius).progress_with(pb) {
         let mut id = 0;
         let mut geode_count = [0; 15];
         let mut total_geodes = 0;
 
-        for j in -SEARCH_RADIUS..SEARCH_RADIUS {
+        for j in -search_radius..search_radius {
             total_geodes -= geode_count[id];
             geode_count[id] = 0;
 
@@ -547,18 +577,19 @@ fn main() {
 
             total_geodes += geode_count[id];
 
-            if total_geodes >= GEODE_THRESHOLD {
                 println!(
                     "Geode cluster with {total_geodes} geodes centered at {}, {}",
                     (i + 7) * 16,
                     (j - 7) * 16,
                 );
+            if total_geodes >= geode_threshold {
                 possible_locations.push((i, j));
             }
 
             id = (id + 1) % 15;
         }
     }
+
     println!("{} possible locations found", possible_locations.len());
 
     for loc in possible_locations {
@@ -574,7 +605,7 @@ fn main() {
             }
         }
 
-        if budding >= BUDDING_THRESHOLD {
+        if budding >= budding_threshold {
             println!(
                 "Geode cluster with {} budding amethyst centered at {} {}",
                 budding,

@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 md5 = "0.7.0"
 java-utils = "0.1.0"
+clap = { version = "4.1.1", features = ["derive"] }
