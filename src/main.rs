@@ -30,10 +30,58 @@ struct BlockPos {
     z: i32,
 }
 
-struct Xoroshiro128PlusPlusRandom {
+struct Xoroshiro128PlusPlus {
     upper_bits: i64,
     lower_bits: i64,
+}
+
+struct JavaRandom {
     seed: i64,
+}
+
+trait Random {
+    fn set_seed(&mut self, seed: i64);
+
+    fn next_bits(&mut self, bits: u32) -> i32;
+
+    fn next_long(&mut self) -> i64 {
+        let i = self.next_bits(32);
+        let j = self.next_bits(32);
+        let l = (i as i64).wrapping_shl(32);
+        l.wrapping_add(j as i64)
+    }
+
+    fn next_int(&mut self, max: i32) -> i32 {
+        if (max & -max) == max {
+            return (max as i64)
+                .wrapping_mul(self.next_bits(31) as i64)
+                .wrapping_shr(31) as i32;
+        }
+
+        let mut i = self.next_bits(31);
+        let mut j = i % max;
+
+        while (i - j + (max - 1)) < 0 {
+            i = self.next_bits(31);
+            j = i % max;
+        }
+
+        j
+    }
+
+    fn next_between(&mut self, min: i32, max: i32) -> i32 {
+        self.next_int(max - min + 1) + min
+    }
+
+    fn next_float(&mut self) -> f32 {
+        self.next_bits(24) as f32 * 5.9604645e-8f32
+    }
+
+    fn next_double(&mut self) -> f64 {
+        let i = self.next_bits(26) as i64;
+        let j = self.next_bits(27) as i64;
+        i.wrapping_shl(27).wrapping_add(j) as f64 * 1.110223e-16f32 as f64
+    }
 }
 
 struct PerlinNoiseSampler {
@@ -53,10 +101,11 @@ struct DoublePerlinNoiseSampler {
 }
 
 struct GeodeGenerator {
-    random: Xoroshiro128PlusPlusRandom,
+    random: Box<dyn Random>,
     world_seed: i64,
     a: i64,
     b: i64,
+    is_17: bool,
 }
 
 #[derive(Parser, Debug)]
@@ -95,17 +144,20 @@ impl BlockPos {
     }
 }
 
-impl Xoroshiro128PlusPlusRandom {
+impl Xoroshiro128PlusPlus {
     fn with_seed(seed: i64) -> Self {
-        let mut random = Xoroshiro128PlusPlusRandom {
+        let mut random = Xoroshiro128PlusPlus {
             lower_bits: 0,
             upper_bits: 0,
-            seed,
         };
+
         random.set_seed(seed);
+
         random
     }
+}
 
+impl Random for Xoroshiro128PlusPlus {
     fn set_seed(&mut self, seed: i64) {
         self.lower_bits = seed ^ 7640891576956012809;
         self.upper_bits = self.lower_bits.wrapping_sub(7046029254386353131);
@@ -123,7 +175,7 @@ impl Xoroshiro128PlusPlusRandom {
         self.upper_bits ^= (self.upper_bits as u64 >> 31) as i64;
     }
 
-    fn next(&mut self) -> i64 {
+    fn next_bits(&mut self, bits: u32) -> i32 {
         let xor = self.upper_bits ^ self.lower_bits;
         let value = {
             self.lower_bits
@@ -135,104 +187,44 @@ impl Xoroshiro128PlusPlusRandom {
         self.lower_bits = self.lower_bits.rotate_left(49) ^ xor ^ (xor << 21);
         self.upper_bits = xor.rotate_left(28);
 
-        value
+        (value as u64).wrapping_shr(64 - bits) as i32
     }
+}
 
-    fn next_bits_long(&mut self, bits: u32) -> i64 {
-        (self.next() as u64).wrapping_shr(64 - bits) as i64
-    }
-
-    fn next_bits_int(&mut self, bits: u32) -> i32 {
-        self.next_bits_long(bits) as i32
-    }
-
-    fn next_long(&mut self) -> i64 {
-        let i = self.next_bits_int(32);
-        let j = self.next_bits_int(32);
-        (i as i64).wrapping_shl(32).wrapping_add(j as i64)
-    }
-
-    fn next_int(&mut self, max: i32) -> i32 {
-        if (max & -max) == max {
-            return (max as i64)
-                .wrapping_mul(self.next_bits_int(31) as i64)
-                .wrapping_shr(31) as i32;
+impl JavaRandom {
+    fn with_seed(seed: i64) -> Self {
+        JavaRandom {
+            seed: (seed ^ 0x5DEECE66D) & 0xFFFFFFFFFFFF,
         }
+    }
+}
 
-        let mut i = self.next_bits_int(31);
-        let mut j = i % max;
-
-        while (i - j + (max - 1)) < 0 {
-            i = self.next_bits_int(31);
-            j = i % max;
-        }
-
-        j
+impl Random for JavaRandom {
+    fn set_seed(&mut self, seed: i64) {
+        self.seed = seed ^ 0x5DEECE66D & 0xFFFFFFFFFFFF
     }
 
-    fn next_between(&mut self, min: i32, max: i32) -> i32 {
-        self.next_int(max - min + 1) + min
-    }
-
-    fn next_float(&mut self) -> f32 {
-        self.next_bits_int(24) as f32 * 5.9604645e-8f32
-    }
-
-    fn next_double(&mut self) -> f64 {
-        let i = self.next_bits_int(26) as i64;
-        let j = self.next_bits_int(27) as i64;
-        i.wrapping_shl(27).wrapping_add(j) as f64 * 1.110223e-16f32 as f64
-    }
-
-    fn with_seed_checked(seed: i64) -> Self {
-        Xoroshiro128PlusPlusRandom::with_seed((seed ^ 0x5DEECE66D) & 0xFFFFFFFFFFFF)
-    }
-
-    fn next_bits_checked(&mut self, bits: u32) -> i32 {
+    fn next_bits(&mut self, bits: u32) -> i32 {
         self.seed = self.seed.wrapping_mul(25214903917) + 11 & 0xFFFFFFFFFFFF;
         return self.seed.wrapping_shr(48 - bits) as i32;
     }
+}
 
-    fn next_long_checked(&mut self) -> i64 {
-        let i = self.next_bits_checked(32);
-        let j = self.next_bits_checked(32);
-        let l = (i as i64).wrapping_shl(32);
-        l.wrapping_add(j as i64)
-    }
-
-    fn next_int_checked(&mut self, max: i32) -> i32 {
-        if (max & -max) == max {
-            return (max as i64)
-                .wrapping_mul(self.next_bits_checked(31) as i64)
-                .wrapping_shr(31) as i32;
-        }
-
-        let mut i = self.next_bits_checked(31);
-        let mut j = i % max;
-
-        while (i - j + (max - 1)) < 0 {
-            i = self.next_bits_checked(31);
-            j = i % max;
-        }
-
-        j
-    }
-
-    fn next_double_checked(&mut self) -> f64 {
-        let i = self.next_bits_checked(26) as i64;
-        let j = self.next_bits_checked(27) as i64;
-        i.wrapping_shl(27).wrapping_add(j) as f64 * 1.110223e-16f32 as f64
-    }
-
-    fn next_split_checked(&mut self, string: &str) -> Self {
-        let seed = self.next_long_checked();
+impl JavaRandom {
+    fn next_split(&mut self, string: &str) -> Self {
+        let seed = self.next_long();
         let hash = string.hash_code() as i64;
-        Xoroshiro128PlusPlusRandom::with_seed_checked(hash ^ seed)
+        JavaRandom::with_seed(hash ^ seed)
+    }
+
+    fn skip(&mut self, next: i32) {
+        for _ in 0..next {
+            self.next_bits(32);
+        }
     }
 }
 
 impl PerlinNoiseSampler {
-    fn new(random: &mut Xoroshiro128PlusPlusRandom) -> Self {
         let origin_x = random.next_double_checked() * 256.0;
         let origin_y = random.next_double_checked() * 256.0;
         let origin_z = random.next_double_checked() * 256.0;
