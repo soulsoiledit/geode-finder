@@ -1,5 +1,5 @@
 use clap::Parser;
-use indicatif::{ProgressBar, ProgressIterator, ProgressStyle};
+use indicatif::{ProgressBar, ProgressStyle};
 use java_utils::HashCode;
 use std::num::Wrapping;
 
@@ -21,8 +21,6 @@ const NOISE_GRADIENTS: [[f64; 3]; 16] = [
     [-1.0, 1.0, 0.0],
     [0.0, -1.0, -1.0],
 ];
-
-const GEODE_SALT: i64 = 20002;
 
 struct BlockPos {
     x: i32,
@@ -128,10 +126,21 @@ struct Args {
 }
 
 impl BlockPos {
-    fn get_squared_dist(&self, pos: &BlockPos) -> f64 {
-        let d = (self.x - pos.x) as f64;
-        let e = (self.y - pos.y) as f64;
-        let f = (self.z - pos.z) as f64;
+    fn get_squared_dist(&self, pos: &BlockPos, is_17: bool) -> f64 {
+        let d: f64;
+        let e: f64;
+        let f: f64;
+
+        if is_17 {
+            d = (self.x - pos.x) as f64 + 0.5;
+            e = (self.y - pos.y) as f64 + 0.5;
+            f = (self.z - pos.z) as f64 + 0.5;
+        } else {
+            d = (self.x - pos.x) as f64;
+            e = (self.y - pos.y) as f64;
+            f = (self.z - pos.z) as f64;
+        }
+
         d * d + e * e + f * f
     }
 
@@ -225,9 +234,10 @@ impl JavaRandom {
 }
 
 impl PerlinNoiseSampler {
-        let origin_x = random.next_double_checked() * 256.0;
-        let origin_y = random.next_double_checked() * 256.0;
-        let origin_z = random.next_double_checked() * 256.0;
+    fn new(random: &mut JavaRandom) -> Self {
+        let origin_x = random.next_double() * 256.0;
+        let origin_y = random.next_double() * 256.0;
+        let origin_z = random.next_double() * 256.0;
 
         let mut permutations = [0i8; 256];
 
@@ -236,7 +246,7 @@ impl PerlinNoiseSampler {
         }
 
         for index in 0..256 {
-            let random_index = random.next_int_checked(256 - index as i32);
+            let random_index = random.next_int(256 - index as i32);
             let old = permutations[index];
             permutations[index] = permutations[index + random_index as usize];
             permutations[index + random_index as usize] = old;
@@ -342,9 +352,15 @@ impl PerlinNoiseSampler {
 }
 
 impl OctavePerlinNoiseSampler {
-    fn new(random: &mut Xoroshiro128PlusPlusRandom) -> Self {
-        let mut rand2 = random.next_split_checked("octave_-4");
-        let octave_samplers = PerlinNoiseSampler::new(&mut rand2);
+    fn new(random: &mut JavaRandom, is_17: bool) -> Self {
+        let octave_samplers: PerlinNoiseSampler;
+        if is_17 {
+            random.skip(262 * 4);
+            octave_samplers = PerlinNoiseSampler::new(random);
+        } else {
+            let mut random2 = random.next_split("octave_-4");
+            octave_samplers = PerlinNoiseSampler::new(&mut random2);
+        }
 
         OctavePerlinNoiseSampler {
             perlin_samplers: octave_samplers,
@@ -365,9 +381,9 @@ impl OctavePerlinNoiseSampler {
 }
 
 impl DoublePerlinNoiseSampler {
-    fn new(mut random: Xoroshiro128PlusPlusRandom) -> Self {
-        let first_sampler = OctavePerlinNoiseSampler::new(&mut random);
-        let second_sampler = OctavePerlinNoiseSampler::new(&mut random);
+    fn new(mut random: JavaRandom, is_17: bool) -> Self {
+        let first_sampler = OctavePerlinNoiseSampler::new(&mut random, is_17);
+        let second_sampler = OctavePerlinNoiseSampler::new(&mut random, is_17);
 
         DoublePerlinNoiseSampler {
             first_sampler,
@@ -386,8 +402,14 @@ impl DoublePerlinNoiseSampler {
 }
 
 impl GeodeGenerator {
-    fn new(world_seed: i64) -> Self {
-        let mut random = Xoroshiro128PlusPlusRandom::with_seed(world_seed);
+    fn new(world_seed: i64, is_17: bool) -> Self {
+        let mut random: Box<dyn Random>;
+
+        if is_17 {
+            random = Box::new(JavaRandom::with_seed(world_seed));
+        } else {
+            random = Box::new(Xoroshiro128PlusPlus::with_seed(world_seed));
+        }
 
         let a = random.next_long() | 1;
         let b = random.next_long() | 1;
@@ -397,6 +419,7 @@ impl GeodeGenerator {
             world_seed,
             a,
             b,
+            is_17,
         }
     }
 
@@ -412,7 +435,11 @@ impl GeodeGenerator {
     }
 
     fn check_chunk(&mut self) -> bool {
-        self.random.next_float() < (1.0 / 24.0)
+        if self.is_17 {
+            self.random.next_float() < (1.0 / 53.0)
+        } else {
+            self.random.next_float() < (1.0 / 24.0)
+        }
     }
 
     fn fast_inv_sqrt(&mut self, x: f64) -> f64 {
@@ -424,7 +451,11 @@ impl GeodeGenerator {
         let origin = BlockPos {
             x: self.random.next_int(16) + 16 * chunk_x as i32,
             z: self.random.next_int(16) + 16 * chunk_z as i32,
-            y: self.random.next_between(-58, 30),
+            y: if self.is_17 {
+                self.random.next_between(6, 46)
+            } else {
+                self.random.next_between(-58, 30)
+            },
         };
 
         let min_gen_offset = -16;
@@ -445,8 +476,8 @@ impl GeodeGenerator {
 
         let generate_crack = (self.random.next_float() as f64) < 0.95;
 
-        let perlin_random = Xoroshiro128PlusPlusRandom::with_seed_checked(self.world_seed);
-        let perlin_noise = DoublePerlinNoiseSampler::new(perlin_random);
+        let perlin_random = JavaRandom::with_seed(self.world_seed);
+        let perlin_noise = DoublePerlinNoiseSampler::new(perlin_random, self.is_17);
 
         let mut block_list1: Vec<(BlockPos, i32)> = vec![];
         for _ in 0..distribution_points {
@@ -481,17 +512,18 @@ impl GeodeGenerator {
                     let mut t = 0f64;
 
                     for (coord, val) in &block_list1 {
-                        s += self
-                            .fast_inv_sqrt(block3.get_squared_dist(coord) + (val.clone() as f64))
-                            + r;
+                        s += self.fast_inv_sqrt(
+                            block3.get_squared_dist(coord, self.is_17) + (val.clone() as f64),
+                        ) + r;
                     }
 
                     for block4 in &block_list2 {
-                        t += self.fast_inv_sqrt(block3.get_squared_dist(block4) + 2 as f64) + r;
+                        t += self
+                            .fast_inv_sqrt(block3.get_squared_dist(block4, self.is_17) + 2 as f64)
+                            + r;
                     }
 
                     if s < inv_outer_thickness {
-                        // skipped += 1;
                         continue;
                     }
                     if generate_crack && t >= l && s < inv_filling_thickness {
@@ -539,19 +571,17 @@ fn main() {
     let search_radius = args.search_radius;
     let geode_threshold = args.geode_threshold;
     let budding_threshold = args.budding_threshold;
+    let is_17 = args.game_version.as_str() == "1.17";
+    let salt: i64 = if is_17 { 20000 } else { 20002 };
 
-    match args.game_version.as_str() {
-        "1.17" => {
-            println!("Version 1.17 is not supported (yet! :3)");
-            return;
-        }
-        _ => {
-            println!("Running geode finder for versions 1.18+...");
-        }
+    if is_17 {
+        println!("Running geode search for version 1.17...");
+    } else {
+        println!("Running geode search for versions 1.18+...");
     }
 
-    let search_diameter = search_radius * 2 + 1;
-    let progress_bar = ProgressBar::new(search_diameter as u64).with_style(
+    let mut finder = GeodeGenerator::new(seed, is_17);
+    let progress_bar = ProgressBar::new(search_radius as u64 * 2 + 1).with_style(
         ProgressStyle::with_template(
             "{spinner:.green} [{elapsed}] [{bar:.green/white}] ({eta_precise})",
         )
@@ -559,7 +589,6 @@ fn main() {
         .progress_chars("ùwú"),
     );
 
-    let mut finder = GeodeGenerator::new(seed);
     let mut possible_locations: Vec<(i64, i64)> = vec![];
     for i in -search_radius..search_radius {
         let mut id = 0;
@@ -571,7 +600,7 @@ fn main() {
             geode_count[id] = 0;
 
             for x in 0..15 {
-                finder.set_decorator_seed(i + x, j, GEODE_SALT);
+                finder.set_decorator_seed(i + x, j, salt);
                 if finder.check_chunk() {
                     geode_count[id] += 1;
                 }
@@ -598,7 +627,7 @@ fn main() {
         let mut budding = 0;
         for i in (minx)..(minx + 15) {
             for j in (miny - 15)..(miny) {
-                finder.set_decorator_seed(i, j, GEODE_SALT);
+                finder.set_decorator_seed(i, j, salt);
                 if finder.check_chunk() {
                     budding += finder.generate(i, j);
                 }
