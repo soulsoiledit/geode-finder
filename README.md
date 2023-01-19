@@ -14,7 +14,7 @@ High density geode and budding amethyst finder for Minecraft. This tool searches
 
 0. This guide currently assumes that you have a working Rust tool chain with Cargo and some knowledge of modifying Rust code.
 
-1. Change the constants for seed, search radius, geode threshold, and budding amethyst threshold. The geode threshold and budding amethyst threshold will need to be tweaked depending on your search radius, but good defaults for 10,000 chunk search radius are a geode threshold of 26-27 and a budding amethyst threshold of 1000.
+1. Use the `--help` argument to see a list of arguments you can modify such as game version, seed, search radius, geode threshold and budding amethyst threshold. The geode threshold and budding amethyst threshold will need to be set depending on your search radius, but good defaults for 10,000 chunk search radius are a geode threshold of 26-27 and a budding amethyst threshold of 1000.
 
 2. Compile and run the binary with cargo.
 
