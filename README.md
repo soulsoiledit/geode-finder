@@ -21,7 +21,7 @@ High density geode and budding amethyst finder for Minecraft. This tool searches
 ## Todo
 
 - [x] Add user input and CLI arguments
-- [+] Add support for 1.17
+- [x] Add support for 1.17
 - [ ] Publish executables for Linux and Windows
 - [ ] Create variables for custom geode feature configuration
 - [ ] Improve search algorithm for geode search to minimize repeated checks
