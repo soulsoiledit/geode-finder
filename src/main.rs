@@ -1,6 +1,5 @@
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
-use java_utils::HashCode;
 use std::num::Wrapping;
 
 const NOISE_GRADIENTS: [[f64; 3]; 16] = [
@@ -221,9 +220,9 @@ impl Random for JavaRandom {
 
 impl JavaRandom {
     fn next_split(&mut self, string: &str) -> Self {
+        // Java hash of octave_-4 is 440898198
         let seed = self.next_long();
-        let hash = string.hash_code() as i64;
-        JavaRandom::with_seed(hash ^ seed)
+        JavaRandom::with_seed(440898198 ^ seed)
     }
 
     fn skip(&mut self, next: i32) {
@@ -358,7 +357,7 @@ impl OctavePerlinNoiseSampler {
             random.skip(262 * 4);
             octave_samplers = PerlinNoiseSampler::new(random);
         } else {
-            let mut random2 = random.next_split("octave_-4");
+            let mut random2 = random.next_split();
             octave_samplers = PerlinNoiseSampler::new(&mut random2);
         }
 
