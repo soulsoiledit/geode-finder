@@ -56,51 +56,6 @@ struct JavaRandom {
     seed: i64,
 }
 
-trait Random {
-    fn set_seed(&mut self, seed: i64);
-
-    fn next_bits(&mut self, bits: u32) -> i32;
-
-    fn next_long(&mut self) -> i64 {
-        let i = self.next_bits(32);
-        let j = self.next_bits(32);
-        let l = (i as i64).wrapping_shl(32);
-        l.wrapping_add(j as i64)
-    }
-
-    fn next_int(&mut self, max: i32) -> i32 {
-        if (max & -max) == max {
-            return (max as i64)
-                .wrapping_mul(self.next_bits(31) as i64)
-                .wrapping_shr(31) as i32;
-        }
-
-        let mut i = self.next_bits(31);
-        let mut j = i % max;
-
-        while (i - j + (max - 1)) < 0 {
-            i = self.next_bits(31);
-            j = i % max;
-        }
-
-        j
-    }
-
-    fn next_between(&mut self, min: i32, max: i32) -> i32 {
-        self.next_int(max - min + 1) + min
-    }
-
-    fn next_float(&mut self) -> f32 {
-        self.next_bits(24) as f32 * 5.9604645e-8f32
-    }
-
-    fn next_double(&mut self) -> f64 {
-        let i = self.next_bits(26) as i64;
-        let j = self.next_bits(27) as i64;
-        i.wrapping_shl(27).wrapping_add(j) as f64 * 1.110223e-16f32 as f64
-    }
-}
-
 struct PerlinNoiseSampler {
     origin_x: f64,
     origin_y: f64,
@@ -170,6 +125,51 @@ impl BlockPos {
             y: self.y + dy,
             z: self.z + dz,
         }
+    }
+}
+
+trait Random {
+    fn set_seed(&mut self, seed: i64);
+
+    fn next_bits(&mut self, bits: u32) -> i32;
+
+    fn next_long(&mut self) -> i64 {
+        let i = self.next_bits(32);
+        let j = self.next_bits(32);
+        let l = (i as i64).wrapping_shl(32);
+        l.wrapping_add(j as i64)
+    }
+
+    fn next_int(&mut self, max: i32) -> i32 {
+        if (max & -max) == max {
+            return (max as i64)
+                .wrapping_mul(self.next_bits(31) as i64)
+                .wrapping_shr(31) as i32;
+        }
+
+        let mut i = self.next_bits(31);
+        let mut j = i % max;
+
+        while (i - j + (max - 1)) < 0 {
+            i = self.next_bits(31);
+            j = i % max;
+        }
+
+        j
+    }
+
+    fn next_between(&mut self, min: i32, max: i32) -> i32 {
+        self.next_int(max - min + 1) + min
+    }
+
+    fn next_float(&mut self) -> f32 {
+        self.next_bits(24) as f32 * 5.9604645e-8f32
+    }
+
+    fn next_double(&mut self) -> f64 {
+        let i = self.next_bits(26) as i64;
+        let j = self.next_bits(27) as i64;
+        i.wrapping_shl(27).wrapping_add(j) as f64 * 1.110223e-16f32 as f64
     }
 }
 
@@ -427,10 +427,9 @@ impl GeodeGenerator {
             random = Box::new(Xoroshiro128PlusPlus::with_seed(world_seed));
         }
 
-        let a = random.next_long() | 1;
-        let b = random.next_long() | 1;
-
         GeodeGenerator {
+            a: random.next_long() | 1,
+            b: random.next_long() | 1,
             random,
             world_seed,
             a,
