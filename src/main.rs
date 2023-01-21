@@ -1,5 +1,6 @@
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
+use java_utils::HashCode;
 use std::{collections::HashMap, num::Wrapping};
 
 const NOISE_GRADIENTS: [[f64; 3]; 16] = [
@@ -122,6 +123,7 @@ struct GeodeGenerator {
     a: i64,
     b: i64,
     is_17: bool,
+    noise_source: DoublePerlinNoiseSampler,
 }
 
 #[derive(Parser, Debug)]
@@ -224,6 +226,16 @@ impl JavaRandom {
             seed: (seed ^ 0x5DEECE66D) & 0xFFFFFFFFFFFF,
         }
     }
+
+    fn next_split(&mut self) -> Self {
+        JavaRandom::with_seed("octave_-4".hash_code() as i64 ^ self.next_long())
+    }
+
+    fn skip(&mut self, next: i32) {
+        for _ in 0..next {
+            self.next_bits(32);
+        }
+    }
 }
 
 impl Random for JavaRandom {
@@ -234,20 +246,6 @@ impl Random for JavaRandom {
     fn next_bits(&mut self, bits: u32) -> i32 {
         self.seed = self.seed.wrapping_mul(25214903917) + 11 & 0xFFFFFFFFFFFF;
         return self.seed.wrapping_shr(48 - bits) as i32;
-    }
-}
-
-impl JavaRandom {
-    fn next_split(&mut self) -> Self {
-        // Java hash of octave_-4 is 440898198
-        let seed = self.next_long();
-        JavaRandom::with_seed(440898198 ^ seed)
-    }
-
-    fn skip(&mut self, next: i32) {
-        for _ in 0..next {
-            self.next_bits(32);
-        }
     }
 }
 
@@ -438,6 +436,7 @@ impl GeodeGenerator {
             a,
             b,
             is_17,
+            noise_source: DoublePerlinNoiseSampler::new(JavaRandom::with_seed(world_seed), is_17),
         }
     }
 
@@ -491,8 +490,6 @@ impl GeodeGenerator {
                 + if distribution_points > 3 { d } else { 0.0 })
             .sqrt();
 
-        let perlin_random = JavaRandom::with_seed(self.world_seed);
-        let perlin_noise = DoublePerlinNoiseSampler::new(perlin_random, self.is_17);
         let generate_crack = (self.random.next_float() as f64) < GEODE_CRACK_CHANCE;
 
         let mut block_list1: Vec<(BlockPos, i32)> = vec![];
@@ -593,6 +590,7 @@ fn main() {
     }
 
     let mut finder = GeodeGenerator::new(seed, is_17);
+
     let progress_bar = ProgressBar::new(search_radius as u64 * 2 + 1).with_style(
         ProgressStyle::with_template(
             "{spinner:.green} [{elapsed}] [{bar:.green/white}] ({eta_precise})",
