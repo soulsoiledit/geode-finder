@@ -78,6 +78,9 @@ struct GeodeGenerator {
     a: i64,
     b: i64,
     is_17: bool,
+    chance: f32,
+    y_min: i32,
+    y_max: i32,
     noise_source: DoublePerlinNoiseSampler,
 }
 
@@ -420,11 +423,20 @@ impl DoublePerlinNoiseSampler {
 impl GeodeGenerator {
     fn new(world_seed: i64, is_17: bool) -> Self {
         let mut random: Box<dyn Random>;
+        let chance: f32;
+        let y_min: i32;
+        let y_max: i32;
 
         if is_17 {
             random = Box::new(JavaRandom::with_seed(world_seed));
+            chance = 1.0 / 53.0;
+            y_min = 6;
+            y_max = 46;
         } else {
             random = Box::new(Xoroshiro128PlusPlus::with_seed(world_seed));
+            chance = 1.0 / 24.0;
+            y_min = -58;
+            y_max = 30;
         }
 
         GeodeGenerator {
@@ -432,9 +444,10 @@ impl GeodeGenerator {
             b: random.next_long() | 1,
             random,
             world_seed,
-            a,
-            b,
             is_17,
+            chance,
+            y_min,
+            y_max,
             noise_source: DoublePerlinNoiseSampler::new(JavaRandom::with_seed(world_seed), is_17),
         }
     }
@@ -451,11 +464,7 @@ impl GeodeGenerator {
     }
 
     fn check_chunk(&mut self) -> bool {
-        if self.is_17 {
-            self.random.next_float() < (1.0 / 53.0)
-        } else {
-            self.random.next_float() < (1.0 / 24.0)
-        }
+        self.random.next_float() < self.chance
     }
 
     fn fast_inv_sqrt(&mut self, x: f64) -> f64 {
@@ -467,11 +476,7 @@ impl GeodeGenerator {
         let origin = BlockPos {
             x: self.random.next_int(16) + 16 * chunk_x as i32,
             z: self.random.next_int(16) + 16 * chunk_z as i32,
-            y: if self.is_17 {
-                self.random.next_between(6, 46)
-            } else {
-                self.random.next_between(-58, 30)
-            },
+            y: self.random.next_between(self.y_min, self.y_max),
         };
 
         let distribution_points = self
@@ -554,21 +559,20 @@ impl GeodeGenerator {
                     if s >= inv_filling_thickness {
                         continue;
                     }
+
                     if s >= inv_inner_thickness {
                         let place_budding =
                             (self.random.next_float() as f64) < GEODE_BUDDING_CHANCE;
 
-                        if bl2 {
+                        if place_budding {
                             budding_count += 1;
-                        }
-
-                        if !bl2 || self.random.next_float() < 0.35 {
-                            continue;
+                            self.random.next_float();
                         }
                     }
                 }
             }
         }
+
         budding_count
     }
 }
