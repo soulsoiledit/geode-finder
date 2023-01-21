@@ -594,13 +594,13 @@ fn main() {
 
     let mut finder = GeodeGenerator::new(seed, is_17);
 
-    let progress_bar = ProgressBar::new(search_radius as u64 * 2 + 1).with_style(
-        ProgressStyle::with_template(
-            "{spinner:.green} [{elapsed}] [{bar:.green/white}] ({eta_precise})",
-        )
-        .unwrap()
-        .progress_chars("ùwú"),
-    );
+    let progress_style = ProgressStyle::with_template(
+        "{spinner:.green} [{elapsed}] [{bar:.green/white}] ({eta_precise})",
+    )
+    .unwrap()
+    .progress_chars("ùwú");
+
+    let progress_bar = ProgressBar::new(search_radius as u64 * 2 + 1).with_style(progress_style);
 
     let mut possible_locations: Vec<(i64, i64)> = vec![];
     for i in -search_radius..search_radius {
@@ -631,33 +631,32 @@ fn main() {
         progress_bar.inc(1);
     }
     progress_bar.finish();
-
     println!("{} possible locations found", possible_locations.len());
 
-    let mut budding_amethyst_counts = HashMap::new();
+    let mut geodes = HashMap::new();
     for loc in possible_locations {
         let minx = loc.0;
         let miny = loc.1 + 1;
-        let mut budding = 0;
+        let mut area_budding_count = 0;
         for i in (minx)..(minx + 15) {
             for j in (miny - 15)..(miny) {
-                if budding_amethyst_counts.contains_key(&(i, j)) {
-                    budding += budding_amethyst_counts[&(i, j)];
+                if geodes.contains_key(&(i, j)) {
+                    area_budding_count += geodes[&(i, j)];
                 } else {
                     finder.set_decorator_seed(i, j, salt);
                     if finder.check_chunk() {
-                        let budding_geode = finder.generate(i, j);
-                        budding += budding_geode;
-                        budding_amethyst_counts.insert((i, j), budding_geode);
+                        let geode_budding_count = finder.generate(i, j);
+                        area_budding_count += geode_budding_count;
+                        geodes.insert((i, j), geode_budding_count);
                     }
                 }
             }
         }
 
-        if budding >= budding_threshold {
+        if area_budding_count >= budding_threshold {
             println!(
                 "Geode cluster with {} budding amethyst centered at {} {}",
-                budding,
+                area_budding_count,
                 (loc.0 + 7) * 16,
                 (loc.1 - 7) * 16
             );
