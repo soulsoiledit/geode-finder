@@ -21,6 +21,25 @@ const NOISE_GRADIENTS: [[f64; 3]; 16] = [
     [0.0, -1.0, -1.0],
 ];
 
+const GEODE_FILLER_THICKNESS: f64 = 1.7;
+const GEODE_INNER_THICKNESS: f64 = 2.2;
+const GEODE_OUTER_THICKNESS: f64 = 4.2;
+
+const GEODE_CRACK_CHANCE: f64 = 0.95;
+const GEODE_CRACK_SIZE: f64 = 2.0;
+const GEODE_CRACK_OFFSET: i32 = 2;
+
+const GEODE_BUDDING_CHANCE: f64 = 0.083;
+const GEODE_OUTER_WALL_DIST: (i32, i32) = (4, 6);
+
+const GEODE_DISTRIBUTION_POINTS: (i32, i32) = (3, 4);
+const GEODE_POINT_OFFSET: (i32, i32) = (1, 2);
+
+const GEODE_MIN_OFFSET: i32 = -16;
+const GEODE_MAX_OFFSET: i32 = 16;
+
+const GEODE_NOISE_MULTIPLIER: f64 = 0.05;
+
 struct BlockPos {
     x: i32,
     y: i32,
@@ -457,34 +476,40 @@ impl GeodeGenerator {
             },
         };
 
-        let min_gen_offset = -16;
-        let max_gen_offset = 16;
+        let distribution_points = self
+            .random
+            .next_between(GEODE_DISTRIBUTION_POINTS.0, GEODE_DISTRIBUTION_POINTS.1);
+        let d: f64 = (distribution_points as f64) / GEODE_OUTER_WALL_DIST.1 as f64;
 
-        let distribution_points = self.random.next_between(3, 4);
-        let d: f64 = (distribution_points as f64) / 6.0;
-
-        let inv_filling_thickness = 1.0 / 1.7f64.sqrt();
-        let inv_inner_thickness = 1.0 / (2.2 + d).sqrt();
-        let inv_outer_thickness = 1.0 / (4.2 + d).sqrt();
+        let inv_filling_thickness = 1.0 / GEODE_FILLER_THICKNESS.sqrt();
+        let inv_inner_thickness = 1.0 / (GEODE_INNER_THICKNESS + d).sqrt();
+        let inv_outer_thickness = 1.0 / (GEODE_OUTER_THICKNESS + d).sqrt();
 
         let l = 1.0
-            / (2.0
+            / (GEODE_CRACK_SIZE
                 + self.random.next_double() / 2.0
                 + if distribution_points > 3 { d } else { 0.0 })
             .sqrt();
 
-        let generate_crack = (self.random.next_float() as f64) < 0.95;
-
         let perlin_random = JavaRandom::with_seed(self.world_seed);
         let perlin_noise = DoublePerlinNoiseSampler::new(perlin_random, self.is_17);
+        let generate_crack = (self.random.next_float() as f64) < GEODE_CRACK_CHANCE;
 
         let mut block_list1: Vec<(BlockPos, i32)> = vec![];
         for _ in 0..distribution_points {
-            let dx = self.random.next_between(4, 6);
-            let dy = self.random.next_between(4, 6);
-            let dz = self.random.next_between(4, 6);
+            let dx = self
+                .random
+                .next_between(GEODE_OUTER_WALL_DIST.0, GEODE_OUTER_WALL_DIST.1);
+            let dy = self
+                .random
+                .next_between(GEODE_OUTER_WALL_DIST.0, GEODE_OUTER_WALL_DIST.1);
+            let dz = self
+                .random
+                .next_between(GEODE_OUTER_WALL_DIST.0, GEODE_OUTER_WALL_DIST.1);
 
-            let point_offset = self.random.next_between(1, 2);
+            let point_offset = self
+                .random
+                .next_between(GEODE_POINT_OFFSET.0, GEODE_POINT_OFFSET.1);
             block_list1.push((origin.add(dx, dy, dz), point_offset));
         }
 
@@ -501,12 +526,14 @@ impl GeodeGenerator {
         }
 
         let mut budding_count = 0;
-        for z in min_gen_offset..=max_gen_offset {
-            for y in min_gen_offset..=max_gen_offset {
-                for x in min_gen_offset..=max_gen_offset {
+        for z in GEODE_MIN_OFFSET..=GEODE_MAX_OFFSET {
+            for y in GEODE_MIN_OFFSET..=GEODE_MAX_OFFSET {
+                for x in GEODE_MIN_OFFSET..=GEODE_MAX_OFFSET {
                     let block3 = origin.add(x, y, z);
-                    let r = perlin_noise.sample(block3.x as f64, block3.y as f64, block3.z as f64)
-                        * 0.05;
+                    let r =
+                        self.noise_source
+                            .sample(block3.x as f64, block3.y as f64, block3.z as f64)
+                            * GEODE_NOISE_MULTIPLIER;
                     let mut s = 0f64;
                     let mut t = 0f64;
 
@@ -517,9 +544,9 @@ impl GeodeGenerator {
                     }
 
                     for block4 in &block_list2 {
-                        t += self
-                            .fast_inv_sqrt(block3.get_squared_dist(block4, self.is_17) + 2 as f64)
-                            + r;
+                        t += self.fast_inv_sqrt(
+                            block3.get_squared_dist(block4, self.is_17) + GEODE_CRACK_OFFSET as f64,
+                        ) + r;
                     }
 
                     if s < inv_outer_thickness {
@@ -532,7 +559,8 @@ impl GeodeGenerator {
                         continue;
                     }
                     if s >= inv_inner_thickness {
-                        let bl2 = (self.random.next_float() as f64) < 0.083f64;
+                        let place_budding =
+                            (self.random.next_float() as f64) < GEODE_BUDDING_CHANCE;
 
                         if bl2 {
                             budding_count += 1;
