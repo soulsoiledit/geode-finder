@@ -1,6 +1,6 @@
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
-use std::num::Wrapping;
+use std::{collections::HashMap, num::Wrapping};
 
 const NOISE_GRADIENTS: [[f64; 3]; 16] = [
     [1.0, 1.0, 0.0],
@@ -219,7 +219,7 @@ impl Random for JavaRandom {
 }
 
 impl JavaRandom {
-    fn next_split(&mut self, string: &str) -> Self {
+    fn next_split(&mut self) -> Self {
         // Java hash of octave_-4 is 440898198
         let seed = self.next_long();
         JavaRandom::with_seed(440898198 ^ seed)
@@ -545,21 +545,6 @@ impl GeodeGenerator {
                 }
             }
         }
-
-        // println!("Coordinates: {} {} {}", origin.x, origin.y, origin.z);
-        // println!("Min Generation Offset: {}", min_gen_offset);
-        // println!("Max Generation Offset: {}", max_gen_offset);
-        // println!("Distribution Points: {}", distribution_points);
-        // println!("d: {}", d);
-        // println!("Filling Thickness: {}", inv_filling_thickness);
-        // println!("Inner Thickness: {}", inv_inner_thickness);
-        // println!("Outer Thickness: {}", inv_outer_thickness);
-        // println!("l: {}", l);
-        // println!("Generate Crack: {}", generate_crack);
-        // println!("Amethyst Count: {}", amethyst_count);
-        // println!("Budding Count: {}", budding_count);
-        // println!("Skipped Count: {}", skipped);
-
         budding_count
     }
 }
@@ -620,15 +605,22 @@ fn main() {
 
     println!("{} possible locations found", possible_locations.len());
 
+    let mut budding_amethyst_counts = HashMap::new();
     for loc in possible_locations {
         let minx = loc.0;
         let miny = loc.1 + 1;
         let mut budding = 0;
         for i in (minx)..(minx + 15) {
             for j in (miny - 15)..(miny) {
-                finder.set_decorator_seed(i, j, salt);
-                if finder.check_chunk() {
-                    budding += finder.generate(i, j);
+                if budding_amethyst_counts.contains_key(&(i, j)) {
+                    budding += budding_amethyst_counts[&(i, j)];
+                } else {
+                    finder.set_decorator_seed(i, j, salt);
+                    if finder.check_chunk() {
+                        let budding_geode = finder.generate(i, j);
+                        budding += budding_geode;
+                        budding_amethyst_counts.insert((i, j), budding_geode);
+                    }
                 }
             }
         }
