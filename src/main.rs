@@ -606,9 +606,8 @@ fn main() {
 
         let ignored_columns = -search_radius + 13;
         let mut sum_index: usize = 0;
-        let mut current_sum = vec![0; (search_radius * 2) as usize];
         let mut previous_sums = vec![vec![0; (search_radius * 2) as usize]; 15];
-        let mut rolling_sums = vec![0; (search_radius * 2) as usize];
+        let mut current_sums = vec![0; (search_radius * 2) as usize];
 
         for i in -search_radius..search_radius {
             let mut slice = [0; 15];
@@ -627,17 +626,16 @@ fn main() {
                 slice_sum += slice[slice_index];
                 slice_index = (slice_index + 1) % 15;
 
-                current_sum[k] = slice_sum;
-                rolling_sums[k] -= previous_sums[sum_index][k];
-                rolling_sums[k] += slice_sum;
+                current_sums[k] -= previous_sums[sum_index][k];
+                current_sums[k] += slice_sum;
+                previous_sums[sum_index][k] = slice_sum;
 
-                if i > ignored_columns && j > ignored_columns && rolling_sums[k] >= geode_threshold
+                if i > ignored_columns && j > ignored_columns && current_sums[k] >= geode_threshold
                 {
                     locations.push((i as i64, j as i64));
                 }
             }
 
-            previous_sums[sum_index] = current_sum.clone();
             sum_index = (sum_index + 1) % 15;
             progress_bar.inc(1);
         }
