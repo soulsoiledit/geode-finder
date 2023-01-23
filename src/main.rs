@@ -593,53 +593,66 @@ fn main() {
     }
 
     let mut finder = GeodeGenerator::new(seed, is_17);
+    let mut locations: Vec<(i64, i64)> = vec![];
 
-    let progress_style = ProgressStyle::with_template(
-        "{spinner:.green} [{elapsed}] [{bar:.green/white}] ({eta_precise})",
-    )
-    .unwrap()
-    .progress_chars("ùwú");
+    {
+        let progress_style = ProgressStyle::with_template(
+            "{spinner:.green} [{elapsed}] [{bar:.green/white}] ({eta_precise})",
+        )
+        .unwrap()
+        .progress_chars("ùwú");
+        let progress_bar =
+            ProgressBar::new(search_radius as u64 * 2 + 1).with_style(progress_style);
 
-    let progress_bar = ProgressBar::new(search_radius as u64 * 2 + 1).with_style(progress_style);
+        let ignored_columns = -search_radius + 13;
+        let mut sum_index: usize = 0;
+        let mut current_sum = vec![0; (search_radius * 2) as usize];
+        let mut previous_sums = vec![vec![0; (search_radius * 2) as usize]; 15];
+        let mut rolling_sums = vec![0; (search_radius * 2) as usize];
 
-    let mut possible_locations: Vec<(i64, i64)> = vec![];
-    for i in -search_radius..search_radius {
-        let mut id = 0;
-        let mut geode_count = [0; 15];
-        let mut total_geodes = 0;
+        for i in -search_radius..search_radius {
+            let mut slice = [0; 15];
+            let mut slice_index = 0;
+            let mut slice_sum = 0;
 
-        for j in -search_radius..search_radius {
-            total_geodes -= geode_count[id];
-            geode_count[id] = 0;
+            for j in -search_radius..search_radius {
+                let k = (j + search_radius) as usize;
 
-            for x in 0..15 {
-                finder.set_decorator_seed(i + x, j, salt);
-                if finder.check_chunk() {
-                    geode_count[id] += 1;
+                slice_sum -= slice[slice_index];
+                slice[slice_index] = 0;
+
+                finder.set_decorator_seed(i as i64, j as i64, salt);
+
+                slice[slice_index] += finder.check_chunk() as i32;
+                slice_sum += slice[slice_index];
+                slice_index = (slice_index + 1) % 15;
+
+                current_sum[k] = slice_sum;
+                rolling_sums[k] -= previous_sums[sum_index][k];
+                rolling_sums[k] += slice_sum;
+
+                if i > ignored_columns && j > ignored_columns && rolling_sums[k] >= geode_threshold
+                {
+                    locations.push((i as i64, j as i64));
                 }
             }
 
-            total_geodes += geode_count[id];
-
-            if total_geodes >= geode_threshold {
-                possible_locations.push((i, j));
-            }
-
-            id = (id + 1) % 15;
+            previous_sums[sum_index] = current_sum.clone();
+            sum_index = (sum_index + 1) % 15;
+            progress_bar.inc(1);
         }
-
-        progress_bar.inc(1);
+        progress_bar.finish();
     }
-    progress_bar.finish();
-    println!("{} possible locations found", possible_locations.len());
+    println!("{}", locations.len());
 
     let mut geodes = HashMap::new();
-    for loc in possible_locations {
-        let minx = loc.0;
-        let miny = loc.1 + 1;
+    for loc in locations {
+        let min_x = loc.0 - 14;
+        let min_z = loc.1 - 14;
+
         let mut area_budding_count = 0;
-        for i in (minx)..(minx + 15) {
-            for j in (miny - 15)..(miny) {
+        for i in min_x..min_x + 15 {
+            for j in min_z..min_z + 15 {
                 if geodes.contains_key(&(i, j)) {
                     area_budding_count += geodes[&(i, j)];
                 } else {
@@ -657,7 +670,7 @@ fn main() {
             println!(
                 "Geode cluster with {} budding amethyst centered at {} {}",
                 area_budding_count,
-                (loc.0 + 7) * 16,
+                (loc.0 - 7) * 16,
                 (loc.1 - 7) * 16
             );
         }
