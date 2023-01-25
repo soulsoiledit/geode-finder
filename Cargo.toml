@@ -1,6 +1,14 @@
 [package]
 name = "geode-finder"
 version = "1.0.0"
+authors = ["soiledit <soulsoill@proton.me>"]
+license = "MIT"
+description = "Tool to search for geodes and budding amethyst in a Minecraft world"
+readme = "README.md"
+homepage = "https://github.com/soulsoiledit/geode-finder"
+repository = "https://github.com/soulsoiledit/geode-finder"
+keywords = ["minecraft", "geode", "finder", "search"]
+categories = ["command-line-utilities"]
 edition = "2021"
 
 [dependencies]
