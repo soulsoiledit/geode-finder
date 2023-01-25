@@ -1,6 +1,6 @@
 # Geode Finder
 
-High density geode and budding amethyst finder for Minecraft. This tool searches through a minecraft world for areas with large amounts of potential locations for geodes to generate and runs a simulation for budding amethyst generation in each area.
+This program helps find high density areas of geodes and budding amethyst in a given Minecraft world. It runs a search through each chunk within the search radius, and finds areas exceeding a given threshold of geodes within the random tick range. Then, it runs a simulation of geode feature generation, including budding amethysts, to filter out areas failing a budding amethyst threshold. Once complete, the program will return a list of coordinates of the center chunks in each location.
 
 ## Installation
 
@@ -8,25 +8,38 @@ High density geode and budding amethyst finder for Minecraft. This tool searches
 (WIP)
 
 ### Cargo
-(WIP)
+
+This guide assumes that you already have Rust and the Cargo toolchain installed and working.
+
+1. Use `cargo build --release` to compile the program.
+
+2. The executable will be located in the `target/release` directory.
 
 ## Usage
 
-0. This guide currently assumes that you have a working Rust tool chain with Cargo and some knowledge of modifying Rust code.
+1. To see a list of all available arguments and defaults, run the executable with the `--help` argument. The defaults are helpful to minimize the amount of searching done.
 
-2. Compile the binary with `cargo build --release`. The executable will be located in the `target/releases` directory.
+2. Set the variables accordingly and run the program (`./geode-finder`):
+- `--seed`: the seed of the world that you want to search in (default: 177013)
+- `--search-radius`: the radius of chunks to search through (default: 10000)
+- `--geode-threshold`: the minimum number of geodes in random tick range (default: 26)
+- `--budding-threshold`: the minimum number of budding amethyst in random tick range (default: 1000)
+- `--game-version`: the game version to use (1.18 or 1.17)
 
-1. Use the `--help` argument to see a list of arguments you can modify such as game version, seed, search radius, geode threshold and budding amethyst threshold. The geode threshold and budding amethyst threshold will need to be set depending on your search radius, but good defaults for 10,000 chunk search radius are a geode threshold of 26-27 and a budding amethyst threshold of 1000.
+3. The program will produce a list of coordinates of the center chunks of each valid location.
 
+4. If you have Carpet mod installed, I've included a helper script to facilitate world pregeneration. Copy the list of valid geode locations to `[worldname]/scripts/shared/geodes.txt` and place `geodegen.sc` inside the `[worldname]/scripts` directory. Load the script and begin the search with `/geodegen`.
+
+5. You can now use the region files from your world in this [Geode AFK Spot Finder](https://russellsprouts.github.io/minecraft-amethyst-tool/) tool to obtain the best locations. 
 
 ## Todo
 
 - [x] Add user input and CLI arguments
 - [x] Add support for 1.17
-- [ ] Publish executables for Linux and Windows
+- [x] Publish executables for Linux and Windows
 - [x] Create variables for custom geode feature configuration
 - [x] Improve search algorithm for geode search to minimize repeated checks
-- [ ] Add carpet script for automating world generation
+- [x] Add carpet script for automating world generation
 
 ## Credits
 
