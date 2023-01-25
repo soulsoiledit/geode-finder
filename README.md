@@ -28,7 +28,7 @@ This guide assumes that you already have Rust and the Cargo toolchain installed 
 
 3. The program will produce a list of coordinates of the center chunks of each valid location.
 
-4. If you have Carpet mod installed, I've included a helper script to facilitate world pregeneration. Copy the list of valid geode locations to `[worldname]/scripts/shared/geodes.txt` and place `geodegen.sc` inside the `[worldname]/scripts` directory. Load the script and begin the search with `/geodegen`.
+4. If you have Carpet mod installed, I've included a helper script to facilitate world pregeneration. Copy the list of valid geode locations to `[worldname]/scripts/shared/geodes.txt` and place `geodegen.sc` inside the `[worldname]/scripts` directory. Load the script and begin the search with `./geodegen`.
 
 5. You can now use the region files from your world in this [Geode AFK Spot Finder](https://russellsprouts.github.io/minecraft-amethyst-tool/) tool to obtain the best locations. 
 
