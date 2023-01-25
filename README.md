@@ -4,16 +4,17 @@ This program helps find high density areas of geodes and budding amethyst in a g
 
 ## Installation
 
-### Github Releases
-(WIP)
+### GitHub Releases
+
+1. An executable for Windows is located in GitHub releases.
 
 ### Cargo
 
-This guide assumes that you already have Rust and the Cargo toolchain installed and working.
+This guide assumes that you already have Rust and Cargo installed and working.
 
-1. Use `cargo build --release` to compile the program.
+1. Use `cargo install geode-finder` to compile and install the program.
 
-2. The executable will be located in the `target/release` directory.
+2. The executable will be located your cargo binary directory.
 
 ## Usage
 
