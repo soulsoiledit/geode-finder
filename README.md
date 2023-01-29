@@ -6,7 +6,7 @@ This program helps find high density areas of geodes and budding amethyst in a g
 
 ### GitHub Releases
 
-1. An executable for Windows is located in GitHub releases.
+1. Executables for Windows, Linux, and macOS are located in GitHub releases. Download the zip corresponding to your platform, extract, and run the binary.
 
 ### Cargo
 
