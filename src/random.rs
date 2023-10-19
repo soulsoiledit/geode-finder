@@ -1,4 +1,3 @@
-use java_utils::HashCode;
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -145,7 +144,8 @@ impl JavaRandom {
     }
 
     pub fn next_split(&mut self) -> Self {
-        JavaRandom::with_seed("octave_-4".hash_code() as i64 ^ self.next_long())
+        // 440898198 is Java hash code for "octave_-4"
+        JavaRandom::with_seed(440898198 ^ self.next_long())
     }
 
     pub fn skip(&mut self, next: i32) {
