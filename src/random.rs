@@ -1,6 +1,42 @@
 use java_utils::HashCode;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-pub struct Xoroshiro128PlusPlus {
+    #[test]
+    fn xoroshiro_random() {
+        let mut random = Xoroshiro128PlusPlusRandom::with_seed(1);
+        assert_eq!(random.next_bits(32), -240669518);
+        assert_eq!(random.next_long(), 6451672560482867317);
+        assert_eq!(random.next_int(256), 12);
+        assert_eq!(random.next_double(), 0.4388219140570252);
+        assert_eq!(random.next_float(), 0.883254647);
+        assert_eq!(random.next_between(16, 64), 42);
+    }
+
+    #[test]
+    fn java_random() {
+        let mut random = JavaRandom::with_seed(1);
+        assert_eq!(random.next_bits(32), -1155869325);
+        assert_eq!(random.next_long(), 1853403699951111791);
+        assert_eq!(random.next_int(256), 104);
+        assert_eq!(random.next_double(), 0.20771484130971707);
+        assert_eq!(random.next_float(), 0.332717001);
+        assert_eq!(random.next_between(16, 64), 17);
+    }
+
+    #[test]
+    fn java_random_split() {
+        let mut random = JavaRandom::with_seed(1);
+        let mut split_random = random.next_split();
+        assert_eq!(split_random.next_bits(32), 1217617485);
+        assert_eq!(split_random.next_long(), -5858143487791806086);
+        assert_eq!(split_random.next_int(256), 164);
+        assert_eq!(split_random.next_double(), 0.04430274619703056);
+        assert_eq!(split_random.next_float(), 0.801519394);
+        assert_eq!(split_random.next_between(16, 64), 18);
+    }
+}
     upper_bits: i64,
     lower_bits: i64,
 }
