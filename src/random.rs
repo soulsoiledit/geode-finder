@@ -67,7 +67,7 @@ pub trait Random {
         let mut i = self.next_bits(31);
         let mut j = i % max;
 
-        while (i - j + (max - 1)) < 0 {
+        while (i.wrapping_sub(j).wrapping_add(max - 1)) < 0 {
             i = self.next_bits(31);
             j = i % max;
         }
