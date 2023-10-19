@@ -1,29 +1,66 @@
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
-
+//
 mod geode;
 mod noise;
 mod random;
 use geode::GeodeGenerator;
 
+#[derive(Debug, Clone, ValueEnum)]
+enum GameVersion {
+    /// 1.17
+    #[clap(name = "17")]
+    MC17,
+
+    /// 1.18+
+    #[clap(name = "18")]
+    MC18,
+
+    /// 1.17 top and 1.18+ bottom
+    #[clap(name = "merged")]
+    MCMerged,
+}
+
+// CLI arguments with clap
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
-    #[arg(short = 'v', long, default_value_t = String::from("1.18"))]
-    game_version: String,
+    /// Game version
+    #[arg(value_enum, short = 'v', long, default_value_t = GameVersion::MC18)]
+    game_version: GameVersion,
 
-    #[arg(short = 's', long, default_value_t = 177013)]
+    /// World seed
+    #[arg(short, long, default_value_t = 0)]
     seed: i64,
 
-    #[arg(short = 'r', long, default_value_t = 10000)]
-    search_radius: i64,
+    /// Search radius
+    #[arg(short = 'r', long, default_value_t = 1000)]
+    search_radius: usize,
 
-    #[arg(short = 'g', long, default_value_t = 26)]
-    geode_threshold: i32,
+    /// Minimum number of geodes per area
+    #[arg(short, long, default_value_t = 25)]
+    geode_threshold: u16,
 
-    #[arg(short = 'b', long, default_value_t = 1000)]
-    budding_threshold: i32,
+    /// Minimum number of budding amethyst per area
+    #[arg(short, long, default_value_t = 1000)]
+    amethyst_threshold: u16,
+
+    /// x coordinate of center chunk
+    #[arg(long, default_value_t = 0)]
+    center_x: i32,
+
+    /// z coordinate of center chunk
+    #[arg(long, default_value_t = 0)]
+    center_z: i32,
+
+    /// Number of threads to use
+    #[arg(long, default_value_t = 1)]
+    threads: u8,
+
+    // /// Search Mode
+    // #[arg(long, default_value_t = 1)]
+    // threads: u8,
 }
 
 fn main() {
