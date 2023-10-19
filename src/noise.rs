@@ -139,7 +139,7 @@ impl PerlinNoiseSampler {
     }
 
     fn map(&self, input: i32) -> i32 {
-        (Wrapping(self.permutations[(input & 0xFF) as usize]) & (Wrapping(0xFFu8 as i8))).0 as i32
+        self.permutations[(input & 0xFF) as usize] as i32
     }
 
     fn grad(&self, hash: i32, x: f64, y: f64, z: f64) -> f64 {
