@@ -31,7 +31,7 @@ struct Args {
     game_version: GameVersion,
 
     /// World seed
-    #[arg(short, long, default_value_t = 0)]
+    #[arg(short, long, allow_hyphen_values = true, default_value_t = 0)]
     seed: i64,
 
     /// Search radius
