@@ -1,7 +1,5 @@
-use std::num::Wrapping;
+use crate::random::{Random, JavaRandom};
 
-use crate::random::JavaRandom;
-use crate::random::Random;
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -77,22 +75,22 @@ mod tests {
 }
 
 const NOISE_GRADIENTS: [[f64; 3]; 16] = [
-    [1.0, 1.0, 0.0],
-    [-1.0, 1.0, 0.0],
-    [1.0, -1.0, 0.0],
-    [-1.0, -1.0, 0.0],
-    [1.0, 0.0, 1.0],
-    [-1.0, 0.0, 1.0],
-    [1.0, 0.0, -1.0],
-    [-1.0, 0.0, -1.0],
-    [0.0, 1.0, 1.0],
-    [0.0, -1.0, 1.0],
-    [0.0, 1.0, -1.0],
-    [0.0, -1.0, -1.0],
-    [1.0, 1.0, 0.0],
-    [0.0, -1.0, 1.0],
-    [-1.0, 1.0, 0.0],
-    [0.0, -1.0, -1.0],
+    [ 1.0,  1.0,  0.0],
+    [-1.0,  1.0,  0.0],
+    [ 1.0, -1.0,  0.0],
+    [-1.0, -1.0,  0.0],
+    [ 1.0,  0.0,  1.0],
+    [-1.0,  0.0,  1.0],
+    [ 1.0,  0.0, -1.0],
+    [-1.0,  0.0, -1.0],
+    [ 0.0,  1.0,  1.0],
+    [ 0.0, -1.0,  1.0],
+    [ 0.0,  1.0, -1.0],
+    [ 0.0, -1.0, -1.0],
+    [ 1.0,  1.0,  0.0],
+    [ 0.0, -1.0,  1.0],
+    [-1.0,  1.0,  0.0],
+    [ 0.0, -1.0, -1.0],
 ];
 
 pub struct PerlinNoiseSampler {
@@ -103,7 +101,7 @@ pub struct PerlinNoiseSampler {
 }
 
 pub struct OctavePerlinNoiseSampler {
-    perlin_samplers: PerlinNoiseSampler,
+    perlin_sampler: PerlinNoiseSampler,
 }
 
 pub struct DoublePerlinNoiseSampler {
@@ -120,7 +118,7 @@ impl PerlinNoiseSampler {
         let mut permutations = [0i8; 256];
 
         for index in 0..256 {
-            permutations[index] = Wrapping(index as i8).0;
+            permutations[index] = index as i8;
         }
 
         for index in 0..256 {
@@ -182,9 +180,11 @@ impl PerlinNoiseSampler {
         let d = x + self.origin_x;
         let e = y + self.origin_y;
         let f = z + self.origin_z;
+
         let i = d.floor();
         let j = e.floor();
         let k = f.floor();
+
         let g = d - i;
         let h = e - j;
         let l = f - k;
@@ -229,17 +229,15 @@ impl PerlinNoiseSampler {
 
 impl OctavePerlinNoiseSampler {
     fn new(random: &mut JavaRandom, is_17: bool) -> Self {
-        let octave_samplers: PerlinNoiseSampler;
-        if is_17 {
-            random.skip(262 * 4);
-            octave_samplers = PerlinNoiseSampler::new(random);
-        } else {
-            let mut random2 = random.next_split();
-            octave_samplers = PerlinNoiseSampler::new(&mut random2);
-        }
-
         OctavePerlinNoiseSampler {
-            perlin_samplers: octave_samplers,
+            perlin_sampler:
+                if is_17 {
+                    random.skip(262 * 4);
+                    PerlinNoiseSampler::new(random)
+                } else {
+                    let mut random2 = random.next_split();
+                    PerlinNoiseSampler::new(&mut random2)
+                }
         }
     }
 
@@ -248,7 +246,7 @@ impl OctavePerlinNoiseSampler {
     }
 
     fn sample(&self, x: f64, y: f64, z: f64) -> f64 {
-        self.perlin_samplers.sample(
+        self.perlin_sampler.sample(
             self.maintain_precision(x * 0.0625),
             self.maintain_precision(y * 0.0625),
             self.maintain_precision(z * 0.0625),
@@ -257,13 +255,10 @@ impl OctavePerlinNoiseSampler {
 }
 
 impl DoublePerlinNoiseSampler {
-    pub fn new(mut random: JavaRandom, is_17: bool) -> Self {
-        let first_sampler = OctavePerlinNoiseSampler::new(&mut random, is_17);
-        let second_sampler = OctavePerlinNoiseSampler::new(&mut random, is_17);
-
+    pub fn new(random: &mut JavaRandom, is_17: bool) -> Self {
         DoublePerlinNoiseSampler {
-            first_sampler,
-            second_sampler,
+            first_sampler: OctavePerlinNoiseSampler::new(random, is_17),
+            second_sampler: OctavePerlinNoiseSampler::new(random, is_17),
         }
     }
 
@@ -272,7 +267,6 @@ impl DoublePerlinNoiseSampler {
         let e = y * 1.0181268882175227;
         let f = z * 1.0181268882175227;
 
-        (self.first_sampler.sample(x, y, z) + self.second_sampler.sample(d, e, f))
-            * ((1.0 / 6.0) * 5.0)
+        (self.first_sampler.sample(x, y, z) + self.second_sampler.sample(d, e, f)) * (0.16666666666666666 * 5.0)
     }
 }
