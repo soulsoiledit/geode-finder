@@ -36,6 +36,8 @@ mod tests {
         assert_eq!(split_random.next_between(16, 64), 18);
     }
 }
+
+pub struct Xoroshiro128PlusPlusRandom {
     upper_bits: i64,
     lower_bits: i64,
 }
@@ -50,10 +52,9 @@ pub trait Random {
     fn next_bits(&mut self, bits: u32) -> i32;
 
     fn next_long(&mut self) -> i64 {
-        let i = self.next_bits(32);
-        let j = self.next_bits(32);
-        let l = (i as i64).wrapping_shl(32);
-        l.wrapping_add(j as i64)
+        let i = self.next_bits(32) as i64;
+        let j = self.next_bits(32) as i64;
+        i.wrapping_shl(32).wrapping_add(j)
     }
 
     fn next_int(&mut self, max: i32) -> i32 {
@@ -89,9 +90,9 @@ pub trait Random {
     }
 }
 
-impl Xoroshiro128PlusPlus {
+impl Xoroshiro128PlusPlusRandom {
     pub fn with_seed(seed: i64) -> Self {
-        let mut random = Xoroshiro128PlusPlus {
+        let mut random = Xoroshiro128PlusPlusRandom {
             lower_bits: 0,
             upper_bits: 0,
         };
@@ -102,7 +103,7 @@ impl Xoroshiro128PlusPlus {
     }
 }
 
-impl Random for Xoroshiro128PlusPlus {
+impl Random for Xoroshiro128PlusPlusRandom {
     fn set_seed(&mut self, seed: i64) {
         self.lower_bits = seed ^ 7640891576956012809;
         self.upper_bits = self.lower_bits.wrapping_sub(7046029254386353131);
@@ -122,12 +123,10 @@ impl Random for Xoroshiro128PlusPlus {
 
     fn next_bits(&mut self, bits: u32) -> i32 {
         let xor = self.upper_bits ^ self.lower_bits;
-        let value = {
-            self.lower_bits
-                .wrapping_add(self.upper_bits)
-                .rotate_left(17)
-                .wrapping_add(self.lower_bits)
-        };
+        let value = self.lower_bits
+            .wrapping_add(self.upper_bits)
+            .rotate_left(17)
+            .wrapping_add(self.lower_bits);
 
         self.lower_bits = self.lower_bits.rotate_left(49) ^ xor ^ (xor << 21);
         self.upper_bits = xor.rotate_left(28);
@@ -148,8 +147,8 @@ impl JavaRandom {
         JavaRandom::with_seed(440898198 ^ self.next_long())
     }
 
-    pub fn skip(&mut self, next: i32) {
-        for _ in 0..next {
+    pub fn skip(&mut self, steps: i32) {
+        for _ in 0..steps {
             self.next_bits(32);
         }
     }
@@ -161,7 +160,7 @@ impl Random for JavaRandom {
     }
 
     fn next_bits(&mut self, bits: u32) -> i32 {
-        self.seed = self.seed.wrapping_mul(25214903917) + 11 & 0xFFFFFFFFFFFF;
+        self.seed = self.seed.wrapping_mul(0x5DEECE66D) + 11 & 0xFFFFFFFFFFFF;
         return self.seed.wrapping_shr(48 - bits) as i32;
     }
 }
