@@ -166,12 +166,40 @@ impl GeodeGenerator {
         if generate_crack {
             let n = self.random.next_int(4);
             let o = distribution_points * 2 + 1;
-            let dx = if n % 2 == 0 { o } else { 0 };
-            let dz = if n == 1 || n == 2 { o } else { 0 };
 
-            block_list2.push(origin.add(dx, 7, dz));
-            block_list2.push(origin.add(dx, 5, dz));
-            block_list2.push(origin.add(dx, 1, dz));
+            match n {
+                0 => {
+                    block_list2 = vec![
+                        origin.add(o, 7, 0),
+                        origin.add(o, 5, 0),
+                        origin.add(o, 1, 0)
+                    ]
+                },
+
+                1 => {
+                    block_list2 = vec![
+                        origin.add(0, 7, o),
+                        origin.add(0, 5, o),
+                        origin.add(0, 1, o)
+                    ]
+                }
+
+                2 => {
+                    block_list2 = vec![
+                        origin.add(o, 7, o),
+                        origin.add(o, 5, o),
+                        origin.add(o, 1, o)
+                    ]
+                }
+
+                _ => {
+                    block_list2 = vec![
+                        origin.add(0, 7, 0),
+                        origin.add(0, 5, 0),
+                        origin.add(0, 1, 0)
+                    ]
+                }
+            }
         }
 
         let mut budding_count = 0;
