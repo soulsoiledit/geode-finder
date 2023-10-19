@@ -124,10 +124,8 @@ impl PerlinNoiseSampler {
         }
 
         for index in 0..256 {
-            let random_index = random.next_int(256 - index as i32);
-            let old = permutations[index];
-            permutations[index] = permutations[index + random_index as usize];
-            permutations[index + random_index as usize] = old;
+            let random_index = random.next_int(256 - index);
+            permutations.swap(index as usize, index as usize + random_index as usize)
         }
 
         PerlinNoiseSampler {
