@@ -265,16 +265,15 @@ impl PerlinNoiseSampler {
 }
 
 impl OctavePerlinNoiseSampler {
-    fn new(random: &mut JavaRandom, is_17: bool) -> Self {
+    fn new(random: &mut JavaRandom, game_version: GameVersion) -> Self {
         OctavePerlinNoiseSampler {
-            perlin_sampler:
-                if is_17 {
+            perlin_sampler: match game_version {
+                GameVersion::MC17 => {
                     random.skip(262 * 4);
                     PerlinNoiseSampler::new(random)
-                } else {
-                    let mut random2 = random.next_split();
-                    PerlinNoiseSampler::new(&mut random2)
                 }
+                _ => PerlinNoiseSampler::new(&mut random.next_split()),
+            },
         }
     }
 
@@ -292,10 +291,10 @@ impl OctavePerlinNoiseSampler {
 }
 
 impl DoublePerlinNoiseSampler {
-    pub fn new(random: &mut JavaRandom, is_17: bool) -> Self {
+    pub fn new(mut random: JavaRandom, game_version: GameVersion) -> Self {
         DoublePerlinNoiseSampler {
-            first_sampler: OctavePerlinNoiseSampler::new(random, is_17),
-            second_sampler: OctavePerlinNoiseSampler::new(random, is_17),
+            first_sampler: OctavePerlinNoiseSampler::new(&mut random, game_version),
+            second_sampler: OctavePerlinNoiseSampler::new(&mut random, game_version),
         }
     }
 
@@ -304,6 +303,7 @@ impl DoublePerlinNoiseSampler {
         let e = y * 1.0181268882175227;
         let f = z * 1.0181268882175227;
 
-        (self.first_sampler.sample(x, y, z) + self.second_sampler.sample(d, e, f)) * (0.16666666666666666 * 5.0)
+        (self.first_sampler.sample(x, y, z) + self.second_sampler.sample(d, e, f))
+            * (0.16666666666666666 * 5.0)
     }
 }

@@ -80,17 +80,11 @@ fn main() {
     let search_radius = args.search_radius;
     let geode_threshold = args.geode_threshold;
     let budding_threshold = args.budding_threshold;
-    let is_17 = args.game_version.as_str() == "1.17";
-    let salt: i64 = if is_17 { 20000 } else { 20002 };
+    let budding_threshold = args.amethyst_threshold;
 
-    if is_17 {
-        println!("Running geode search for version 1.17...");
-    } else {
-        println!("Running geode search for versions 1.18+...");
-    }
+    let is_17 = matches!(args.game_version, GameVersion::MC17);
 
-    let mut finder = GeodeGenerator::new(seed, is_17);
-    let mut locations: Vec<(i64, i64)> = vec![];
+    let mut finder = Geode::new(seed, args.game_version);
     let progress_bar = initialize_progress_bar(search_radius as u64);
 
 
