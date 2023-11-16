@@ -12,6 +12,5 @@ categories = ["command-line-utilities"]
 edition = "2021"
 
 [dependencies]
-md5 = "0.7.0"
 clap = { version = "4.1.1", features = ["derive"] }
 indicatif = "0.17.3"
