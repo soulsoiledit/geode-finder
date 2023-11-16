@@ -2,10 +2,17 @@ use crate::noise::DoublePerlinNoiseSampler;
 use crate::random::JavaRandom;
 use crate::random::Random;
 use crate::random::Xoroshiro128PlusPlus;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-const GEODE_FILLER_THICKNESS: f64 = 1.7;
-const GEODE_INNER_THICKNESS: f64 = 2.2;
-const GEODE_OUTER_THICKNESS: f64 = 4.2;
+    #[test]
+    fn fast_inv_sqrt() {
+        let mut random = Xoroshiro128PlusPlusRandom::with_seed(1);
+        assert_eq!(fast_inverse_sqrt(random.next_double()), 1.0274868578944794);
+        assert_eq!(fast_inverse_sqrt(random.next_double()), 1.0526759381538786);
+        assert_eq!(fast_inverse_sqrt(random.next_double()), 1.5075261791112862);
+    }
 
 const GEODE_CRACK_CHANCE: f64 = 0.95;
 const GEODE_CRACK_SIZE: f64 = 2.0;
