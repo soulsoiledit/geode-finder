@@ -195,7 +195,7 @@ impl Geode {
     }
 
     pub fn generate(&mut self, chunk_x: i64, chunk_z: i64) -> i32 {
-        if self.check_chunk(chunk_x, chunk_z) {
+        if !self.check_chunk(chunk_x, chunk_z) {
             return 0;
         }
 
