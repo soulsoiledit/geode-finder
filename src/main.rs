@@ -7,8 +7,8 @@ mod noise;
 mod random;
 use geode::GeodeGenerator;
 
-#[derive(Debug, Clone, ValueEnum)]
-enum GameVersion {
+#[derive(Debug, Copy, Clone, ValueEnum)]
+pub enum GameVersion {
     /// 1.17
     #[clap(name = "17")]
     MC17,
@@ -16,6 +16,10 @@ enum GameVersion {
     /// 1.18+
     #[clap(name = "18")]
     MC18,
+
+    /// 1.20+
+    #[clap(name = "20")]
+    MC20,
 
     /// 1.17 top and 1.18+ bottom
     #[clap(name = "merged")]
