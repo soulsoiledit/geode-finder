@@ -65,6 +65,13 @@ struct Args {
     // /// Search Mode
     // #[arg(long, default_value_t = 1)]
     // threads: u8,
+
+fn initialize_progress_bar(search_radius: u64) -> ProgressBar {
+    let progress_style = ProgressStyle::default_spinner()
+        .progress_chars("*-")
+        .template("{spinner:.green} [{elapsed}] [{bar:.green/white}] ({eta_precise})")
+        .unwrap();
+    ProgressBar::new(search_radius * 2 + 1).with_style(progress_style)
 }
 
 fn main() {
@@ -84,14 +91,8 @@ fn main() {
 
     let mut finder = GeodeGenerator::new(seed, is_17);
     let mut locations: Vec<(i64, i64)> = vec![];
+    let progress_bar = initialize_progress_bar(search_radius as u64);
 
-    {
-        let progress_style = ProgressStyle::with_template(
-            "{spinner:.green} [{elapsed}] [{bar:.green/white}] ({eta_precise})",
-        )
-        .unwrap()
-        .progress_chars("ùwú");
-        let progress_bar = ProgressBar::new(search_radius as u64 * 2).with_style(progress_style);
 
         let ignored_columns = -search_radius + 13;
         let mut sum_index: usize = 0;
