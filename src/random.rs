@@ -123,7 +123,8 @@ impl Random for Xoroshiro128PlusPlusRandom {
 
     fn next_bits(&mut self, bits: u32) -> i32 {
         let xor = self.upper_bits ^ self.lower_bits;
-        let value = self.lower_bits
+        let value = self
+            .lower_bits
             .wrapping_add(self.upper_bits)
             .rotate_left(17)
             .wrapping_add(self.lower_bits);
@@ -161,6 +162,6 @@ impl Random for JavaRandom {
 
     fn next_bits(&mut self, bits: u32) -> i32 {
         self.seed = self.seed.wrapping_mul(0x5DEECE66D) + 11 & 0xFFFFFFFFFFFF;
-        return self.seed.wrapping_shr(48 - bits) as i32;
+        self.seed.wrapping_shr(48 - bits) as i32
     }
 }
