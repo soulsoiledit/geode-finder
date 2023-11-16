@@ -1,4 +1,7 @@
-use crate::random::{Random, JavaRandom};
+use crate::{
+    random::{JavaRandom, Random},
+    GameVersion,
+};
 
 #[cfg(test)]
 mod tests {
@@ -11,41 +14,65 @@ mod tests {
         let mut random = JavaRandom::with_seed(1);
         let perlin = PerlinNoiseSampler::new(&mut random);
 
-        let small_values = [ -0.329206096503402, -0.03439388679613971, -0.11316047961582686 ];
+        let small_values = [
+            -0.329206096503402,
+            -0.03439388679613971,
+            -0.11316047961582686,
+        ];
         for value in small_values {
-            let sample_x = random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64 + random.next_double();
-            let sample_y = random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64 + random.next_double();
-            let sample_z = random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64 + random.next_double();
+            let sample_x = random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64
+                + random.next_double();
+            let sample_y = random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64
+                + random.next_double();
+            let sample_z = random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64
+                + random.next_double();
             assert_eq!(perlin.sample(sample_x, sample_y, sample_z), value);
         }
 
-        let large_values = [ -0.008194550179363436, -0.3544541560652735, 0.4322999844908949 ];
+        let large_values = [
+            -0.008194550179363436,
+            -0.3544541560652735,
+            0.4322999844908949,
+        ];
         for value in large_values {
-            let sample_x = random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64 + random.next_double();
-            let sample_y = random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64 + random.next_double();
-            let sample_z = random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64 + random.next_double();
+            let sample_x = random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64
+                + random.next_double();
+            let sample_y = random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64
+                + random.next_double();
+            let sample_z = random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64
+                + random.next_double();
             assert_eq!(perlin.sample(sample_x, sample_y, sample_z), value);
         }
     }
-    
+
     #[test]
     fn octave_perlin_noise() {
         let mut random = JavaRandom::with_seed(1);
-        let perlin = OctavePerlinNoiseSampler::new(&mut random, false);
+        let perlin = OctavePerlinNoiseSampler::new(&mut random, GameVersion::MC18);
 
-        let small_values = [ -0.018245426881509652, -0.2530421249924314, -0.38836144968127345 ];
+        let small_values = [
+            -0.018245426881509652,
+            -0.2530421249924314,
+            -0.38836144968127345,
+        ];
         for value in small_values {
-            let sample_x = random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64 + random.next_double();
-            let sample_y = random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64 + random.next_double();
-            let sample_z = random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64 + random.next_double();
+            let sample_x = random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64
+                + random.next_double();
+            let sample_y = random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64
+                + random.next_double();
+            let sample_z = random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64
+                + random.next_double();
             assert_eq!(perlin.sample(sample_x, sample_y, sample_z), value);
         }
 
-        let large_values = [ 0.1372991819895536, 0.0643132372531573, 0.39104196238201105 ];
+        let large_values = [0.1372991819895536, 0.0643132372531573, 0.39104196238201105];
         for value in large_values {
-            let sample_x = random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64 + random.next_double();
-            let sample_y = random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64 + random.next_double();
-            let sample_z = random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64 + random.next_double();
+            let sample_x = random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64
+                + random.next_double();
+            let sample_y = random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64
+                + random.next_double();
+            let sample_z = random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64
+                + random.next_double();
             assert_eq!(perlin.sample(sample_x, sample_y, sample_z), value);
         }
     }
@@ -54,43 +81,53 @@ mod tests {
     fn double_perlin_noise() {
         let mut chunk_random = JavaRandom::with_seed(1);
         let mut noise_random = JavaRandom::with_seed(1);
-        let perlin = DoublePerlinNoiseSampler::new(&mut noise_random, false);
+        let perlin = DoublePerlinNoiseSampler::new(noise_random, GameVersion::MC18);
 
-        let small_values = [ 0.8965499416329251, 0.07803898967475986, -0.2869284068577471 ];
+        let small_values = [0.8965499416329251, 0.07803898967475986, -0.2869284068577471];
         for value in small_values {
-            let sample_x = chunk_random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64 + chunk_random.next_double();
-            let sample_y = chunk_random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64 + chunk_random.next_double();
-            let sample_z = chunk_random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64 + chunk_random.next_double();
+            let sample_x = chunk_random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64
+                + chunk_random.next_double();
+            let sample_y = chunk_random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64
+                + chunk_random.next_double();
+            let sample_z = chunk_random.next_between(-SMALL_VALUE_MAX, SMALL_VALUE_MAX) as f64
+                + chunk_random.next_double();
             assert_eq!(perlin.sample(sample_x, sample_y, sample_z), value);
         }
 
-        let large_values = [ -0.4339519444641158, 0.13237515607593373, 0.024849328940440885 ];
+        let large_values = [
+            -0.4339519444641158,
+            0.13237515607593373,
+            0.024849328940440885,
+        ];
         for value in large_values {
-            let sample_x = chunk_random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64 + chunk_random.next_double();
-            let sample_y = chunk_random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64 + chunk_random.next_double();
-            let sample_z = chunk_random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64 + chunk_random.next_double();
+            let sample_x = chunk_random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64
+                + chunk_random.next_double();
+            let sample_y = chunk_random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64
+                + chunk_random.next_double();
+            let sample_z = chunk_random.next_between(-LARGE_VALUE_MAX, LARGE_VALUE_MAX) as f64
+                + chunk_random.next_double();
             assert_eq!(perlin.sample(sample_x, sample_y, sample_z), value);
         }
     }
 }
 
 const NOISE_GRADIENTS: [[f64; 3]; 16] = [
-    [ 1.0,  1.0,  0.0],
-    [-1.0,  1.0,  0.0],
-    [ 1.0, -1.0,  0.0],
-    [-1.0, -1.0,  0.0],
-    [ 1.0,  0.0,  1.0],
-    [-1.0,  0.0,  1.0],
-    [ 1.0,  0.0, -1.0],
-    [-1.0,  0.0, -1.0],
-    [ 0.0,  1.0,  1.0],
-    [ 0.0, -1.0,  1.0],
-    [ 0.0,  1.0, -1.0],
-    [ 0.0, -1.0, -1.0],
-    [ 1.0,  1.0,  0.0],
-    [ 0.0, -1.0,  1.0],
-    [-1.0,  1.0,  0.0],
-    [ 0.0, -1.0, -1.0],
+    [1.0, 1.0, 0.0],
+    [-1.0, 1.0, 0.0],
+    [1.0, -1.0, 0.0],
+    [-1.0, -1.0, 0.0],
+    [1.0, 0.0, 1.0],
+    [-1.0, 0.0, 1.0],
+    [1.0, 0.0, -1.0],
+    [-1.0, 0.0, -1.0],
+    [0.0, 1.0, 1.0],
+    [0.0, -1.0, 1.0],
+    [0.0, 1.0, -1.0],
+    [0.0, -1.0, -1.0],
+    [1.0, 1.0, 0.0],
+    [0.0, -1.0, 1.0],
+    [-1.0, 1.0, 0.0],
+    [0.0, -1.0, -1.0],
 ];
 
 pub struct PerlinNoiseSampler {
@@ -122,8 +159,8 @@ impl PerlinNoiseSampler {
         }
 
         for index in 0..256 {
-            let random_index = random.next_int(256 - index);
-            permutations.swap(index as usize, index as usize + random_index as usize)
+            let random_index = random.next_int(256 - index as i32) as usize;
+            permutations.swap(index, index + random_index)
         }
 
         PerlinNoiseSampler {
