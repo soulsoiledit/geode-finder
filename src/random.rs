@@ -9,7 +9,7 @@ mod tests {
         assert_eq!(random.next_long(), 6451672560482867317);
         assert_eq!(random.next_int(256), 12);
         assert_eq!(random.next_double(), 0.4388219140570252);
-        assert_eq!(random.next_float(), 0.883254647);
+        assert_eq!(random.next_float(), 0.88325464);
         assert_eq!(random.next_between(16, 64), 42);
     }
 
@@ -20,7 +20,7 @@ mod tests {
         assert_eq!(random.next_long(), 1853403699951111791);
         assert_eq!(random.next_int(256), 104);
         assert_eq!(random.next_double(), 0.20771484130971707);
-        assert_eq!(random.next_float(), 0.332717001);
+        assert_eq!(random.next_float(), 0.332717);
         assert_eq!(random.next_between(16, 64), 17);
     }
 
@@ -32,7 +32,7 @@ mod tests {
         assert_eq!(split_random.next_long(), -5858143487791806086);
         assert_eq!(split_random.next_int(256), 164);
         assert_eq!(split_random.next_double(), 0.04430274619703056);
-        assert_eq!(split_random.next_float(), 0.801519394);
+        assert_eq!(split_random.next_float(), 0.8015194);
         assert_eq!(split_random.next_between(16, 64), 18);
     }
 }
@@ -161,7 +161,7 @@ impl Random for JavaRandom {
     }
 
     fn next_bits(&mut self, bits: u32) -> i32 {
-        self.seed = self.seed.wrapping_mul(0x5DEECE66D) + 11 & 0xFFFFFFFFFFFF;
+        self.seed = (self.seed.wrapping_mul(0x5DEECE66D) + 11) & 0xFFFFFFFFFFFF;
         self.seed.wrapping_shr(48 - bits) as i32
     }
 }
