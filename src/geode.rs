@@ -113,6 +113,8 @@ pub struct Geode {
 
 impl Geode {
     pub fn new(seed: i64, game_version: GameVersion) -> Self {
+        let mut noise_random = JavaRandom::with_seed(seed);
+
         match game_version {
             GameVersion::MC17 => {
                 let mut random = Box::new(JavaRandom::with_seed(seed));
@@ -126,7 +128,7 @@ impl Geode {
                     salt: 20000,
                     y_min: 6,
                     y_max: 46,
-                    noise: DoublePerlinNoiseSampler::new(JavaRandom::with_seed(seed), game_version),
+                    noise: DoublePerlinNoiseSampler::new(&mut noise_random, game_version),
                     inverse_sqrt: fast_inverse_sqrt,
                     find_squared_distance: find_squared_distance_17,
                 }
@@ -144,7 +146,7 @@ impl Geode {
                     salt: 20002,
                     y_min: -58,
                     y_max: 30,
-                    noise: DoublePerlinNoiseSampler::new(JavaRandom::with_seed(seed), game_version),
+                    noise: DoublePerlinNoiseSampler::new(&mut noise_random, game_version),
                     inverse_sqrt,
                     find_squared_distance: find_squared_distance_18,
                 }
@@ -162,7 +164,7 @@ impl Geode {
                     salt: 20002,
                     y_min: -58,
                     y_max: 30,
-                    noise: DoublePerlinNoiseSampler::new(JavaRandom::with_seed(seed), game_version),
+                    noise: DoublePerlinNoiseSampler::new(&mut noise_random, game_version),
                     inverse_sqrt: fast_inverse_sqrt,
                     find_squared_distance: find_squared_distance_18,
                 }
@@ -170,7 +172,7 @@ impl Geode {
         }
     }
 
-    pub fn set_decorator_seed(&mut self, chunk_x: i64, chunk_z: i64) -> () {
+    pub fn set_decorator_seed(&mut self, chunk_x: i64, chunk_z: i64) {
         self.random.set_seed(
             (chunk_x
                 .wrapping_shl(4)
