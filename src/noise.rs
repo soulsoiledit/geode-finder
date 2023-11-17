@@ -85,8 +85,8 @@ impl PerlinNoiseSampler {
 
         let mut permutations = [0i8; 256];
 
-        for index in 0..256 {
-            permutations[index] = index as i8;
+        for (index, item) in &mut permutations.iter_mut().enumerate() {
+            *item = index as i8;
         }
 
         for index in 0..256 {
@@ -123,6 +123,7 @@ impl PerlinNoiseSampler {
         self.lerp(dy, self.lerp(dx, x0, x1), self.lerp(dx, x2, x3))
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn lerp3(
         &self,
         dx: f64,
@@ -137,11 +138,11 @@ impl PerlinNoiseSampler {
         x6: f64,
         x7: f64,
     ) -> f64 {
-        return self.lerp(
+        self.lerp(
             dz,
             self.lerp2(dx, dy, x0, x1, x2, x3),
             self.lerp2(dx, dy, x4, x5, x6, x7),
-        );
+        )
     }
 
     fn sample(&self, x: f64, y: f64, z: f64) -> f64 {
@@ -160,6 +161,7 @@ impl PerlinNoiseSampler {
         self.sample_base(i as i32, j as i32, k as i32, g, h, l, h)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn sample_base(
         &self,
         secx: i32,
@@ -222,10 +224,10 @@ impl OctavePerlinNoiseSampler {
 }
 
 impl DoublePerlinNoiseSampler {
-    pub fn new(mut random: JavaRandom, game_version: GameVersion) -> Self {
+    pub fn new(random: &mut JavaRandom, game_version: GameVersion) -> Self {
         DoublePerlinNoiseSampler {
-            first_sampler: OctavePerlinNoiseSampler::new(&mut random, game_version),
-            second_sampler: OctavePerlinNoiseSampler::new(&mut random, game_version),
+            first_sampler: OctavePerlinNoiseSampler::new(random, game_version),
+            second_sampler: OctavePerlinNoiseSampler::new(random, game_version),
         }
     }
 
