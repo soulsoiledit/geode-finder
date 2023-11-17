@@ -59,6 +59,8 @@ const NOISE_GRADIENTS: [[f64; 3]; 16] = [
     [0.0, -1.0, -1.0],
 ];
 
+const SCALING_FACTOR: f64 = 1.0 / 6.0 * 5.0;
+
 pub struct PerlinNoiseSampler {
     origin_x: f64,
     origin_y: f64,
@@ -232,7 +234,6 @@ impl DoublePerlinNoiseSampler {
         let e = y * 1.0181268882175227;
         let f = z * 1.0181268882175227;
 
-        (self.first_sampler.sample(x, y, z) + self.second_sampler.sample(d, e, f))
-            * (0.16666666666666666 * 5.0)
+        (self.first_sampler.sample(x, y, z) + self.second_sampler.sample(d, e, f)) * SCALING_FACTOR
     }
 }
