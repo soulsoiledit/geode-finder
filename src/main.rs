@@ -70,12 +70,12 @@ struct Args {
     mode: u8,
 }
 
-fn initialize_progress_bar(search_radius: u64) -> ProgressBar {
+fn initialize_progress_bar(length: u64) -> ProgressBar {
     let progress_style = ProgressStyle::default_spinner()
         .progress_chars("*-")
         .template("{spinner:.green} [{elapsed}] [{bar:.green/white}] ({eta_precise})")
         .unwrap();
-    ProgressBar::new(search_radius * 2 + 1).with_style(progress_style)
+    ProgressBar::new(length).with_style(progress_style)
 }
 
 fn main() {
@@ -132,9 +132,9 @@ fn search(finder: &mut Geode, args: Args) -> Vec<(i64, i64)> {
     let search_radius = args.search_radius as i64;
     let geode_threshold = args.geode_threshold;
 
-    let progress_bar = initialize_progress_bar(search_radius as u64);
 
-    let search_length = args.search_radius * 2 + 1;
+    let search_length = search_radius as usize * 2 + 1;
+    let progress_bar = initialize_progress_bar(search_length as u64);
 
     let mut locations: Vec<(i64, i64)> = vec![];
 
