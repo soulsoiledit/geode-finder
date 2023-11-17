@@ -62,25 +62,17 @@ struct BlockPos {
 }
 
 fn find_squared_distance_17(pos1: &BlockPos, pos2: &BlockPos) -> f64 {
-    let d: f64;
-    let e: f64;
-    let f: f64;
-
-    d = (pos1.x - pos2.x) as f64 + 0.5;
-    e = (pos1.y - pos2.y) as f64 + 0.5;
-    f = (pos1.z - pos2.z) as f64 + 0.5;
+    let d = (pos1.x - pos2.x) as f64 + 0.5;
+    let e = (pos1.y - pos2.y) as f64 + 0.5;
+    let f = (pos1.z - pos2.z) as f64 + 0.5;
 
     d * d + e * e + f * f
 }
 
 fn find_squared_distance_18(pos1: &BlockPos, pos2: &BlockPos) -> f64 {
-    let d: f64;
-    let e: f64;
-    let f: f64;
-
-    d = (pos1.x - pos2.x) as f64;
-    e = (pos1.y - pos2.y) as f64;
-    f = (pos1.z - pos2.z) as f64;
+    let d = (pos1.x - pos2.x) as f64;
+    let e = (pos1.y - pos2.y) as f64;
+    let f = (pos1.z - pos2.z) as f64;
 
     d * d + e * e + f * f
 }
