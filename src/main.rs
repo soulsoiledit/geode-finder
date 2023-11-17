@@ -1,4 +1,3 @@
-#![allow(warnings)]
 use clap::{Parser, ValueEnum};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
@@ -9,6 +8,9 @@ mod random;
 mod search;
 
 use geode::Geode;
+
+const RANDOM_RANGE: usize = 13;
+const RANDOM_RANGE_OFFSET: i64 = RANDOM_RANGE as i64 + 1;
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum GameVersion {
@@ -92,9 +94,9 @@ fn main() {
     let mut locations = search(&mut finder, args);
 
     for loc in locations {
-        let min_x = loc.0 - 12;
+        let min_x = loc.0 - RANDOM_RANGE_OFFSET;
         let max_x = loc.0 + 1;
-        let min_z = loc.1 - 12;
+        let min_z = loc.1 - RANDOM_RANGE_OFFSET;
         let max_z = loc.1 + 1;
 
         let mut area_budding_count = 0;
@@ -139,11 +141,11 @@ fn search(finder: &mut Geode, args: Args) -> Vec<(i64, i64)> {
     let mut locations: Vec<(i64, i64)> = vec![];
 
     let mut sum_index: usize = 0;
-    let mut previous_sums = vec![vec![0; search_length]; 13];
-    let mut current_sums = vec![0u8; search_length];
+    let mut previous_sums = vec![vec![0; search_length]; RANDOM_RANGE];
+    let mut current_sums = vec![0i8; search_length];
 
     for i in -search_radius..=search_radius {
-        let mut slice = [0u8; 13];
+        let mut slice = [0; RANDOM_RANGE];
         let mut slice_index = 0;
         let mut slice_sum = 0u8;
         let sum_slice = &mut previous_sums[sum_index];
@@ -155,7 +157,7 @@ fn search(finder: &mut Geode, args: Args) -> Vec<(i64, i64)> {
             slice_sum -= slice[slice_index];
 
             slice[slice_index] = is_geode;
-            slice_index = (slice_index + 1) % 13;
+            slice_index = (slice_index + 1) % RANDOM_RANGE;
 
             let k = (j + search_radius) as usize;
             let slice_u16 = slice_sum as u8;
@@ -168,7 +170,7 @@ fn search(finder: &mut Geode, args: Args) -> Vec<(i64, i64)> {
             }
         }
 
-        sum_index = (sum_index + 1) % 13;
+        sum_index = (sum_index + 1) % RANDOM_RANGE;
         progress_bar.inc(1);
     }
 
