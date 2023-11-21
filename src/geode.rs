@@ -216,14 +216,11 @@ impl Geode {
     }
 
     pub fn set_decorator_seed(&mut self, chunk_x: i64, chunk_z: i64) {
-        self.random.set_seed(
-            (chunk_x
-                .wrapping_shl(4)
-                .wrapping_mul(self.a)
-                .wrapping_add(chunk_z.wrapping_shl(4).wrapping_mul(self.b))
-                ^ self.seed)
-                .wrapping_add(self.salt),
-        );
+        let bx = chunk_x.wrapping_shl(4).wrapping_mul(self.seed_high);
+        let bz = chunk_z.wrapping_shl(4).wrapping_mul(self.seed_low);
+        let pop_seed = bx.wrapping_add(bz) ^ self.seed;
+        let dec_seed = pop_seed.wrapping_add(self.salt);
+        self.random.set_seed(dec_seed);
     }
 
     pub fn check_chunk(&mut self, chunk_x: i64, chunk_z: i64) -> bool {
