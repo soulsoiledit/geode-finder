@@ -58,6 +58,7 @@ pub trait Random {
     }
 
     fn next_int(&mut self, max: i32) -> i32 {
+        // Check if power of 2
         if (max & -max) == max {
             return (max as i64)
                 .wrapping_mul(self.next_bits(31) as i64)
@@ -87,6 +88,12 @@ pub trait Random {
         let i = self.next_bits(26) as i64;
         let j = self.next_bits(27) as i64;
         i.wrapping_shl(27).wrapping_add(j) as f64 * 1.110223e-16f32 as f64
+    }
+
+    fn skip(&mut self, steps: i32) {
+        for _ in 0..steps {
+            self.next_bits(32);
+        }
     }
 }
 
@@ -146,12 +153,6 @@ impl JavaRandom {
     pub fn next_split(&mut self) -> Self {
         // 440898198 is Java hash code for "octave_-4"
         JavaRandom::with_seed(440898198 ^ self.next_long())
-    }
-
-    pub fn skip(&mut self, steps: i32) {
-        for _ in 0..steps {
-            self.next_bits(32);
-        }
     }
 }
 
