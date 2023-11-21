@@ -8,33 +8,76 @@ use crate::GameVersion;
 mod tests {
     use super::*;
 
+
+    // TODO: get real values for these too
+    // #[test]
+    // fn generate_17() {
+    //     let mut finder = Geode::new(1, GameVersion::MC17);
+    //     // finder.generate(10, 10);
+    // }
+    //
+    // #[test]
+    // fn generate_18() {
+    //     let mut finder = Geode::new(1, GameVersion::MC18);
+    //     // finder.generate(10, 10);
+    // }
+
     #[test]
-    fn fast_inv_sqrt() {
-        let mut random = Xoroshiro128PlusPlusRandom::with_seed(1);
-        assert_eq!(fast_inverse_sqrt(random.next_double()), 1.0274868578944794);
-        assert_eq!(fast_inverse_sqrt(random.next_double()), 1.0526759381538786);
-        assert_eq!(fast_inverse_sqrt(random.next_double()), 1.5075261791112862);
+    fn generate_20() {
+        let mut finder = Geode::new(1, GameVersion::MC20);
+
+        let range = 128;
+        let mut geode_count = 0;
+        for i in -range..=range {
+            for j in -range..=range {
+                if finder.check_chunk(i, j) {
+                    geode_count += 1;
+                }
+            }
+        }
+
+        assert_eq!(geode_count, 2759);
+
+        let range = 32;
+        let mut amethyst_count = 0;
+        for i in -range..=range {
+            for j in -range..=range {
+                if finder.check_chunk(i, j) {
+                    amethyst_count += finder.generate(i, j);
+                }
+            }
+        }
+
+        assert_eq!(amethyst_count, 6704);
     }
 
     #[test]
-    fn geode_generation_fast_18() {
-        let mut finder = Geode::new(1, GameVersion::MC18);
-        finder.generate(10, 10);
-        // let cx = 10;
-        // let cy = 10;
-        // // TODO: Figure out actual value and iterate over random chunks
-        // assert_eq!(finder.check_chunk(cx, cy), false);
-        //
-        // let mut budding = 0;
-        // for i in 0..100 {
-        //     for j in 0..100 {
-        //         if finder.check_chunk(i, j) {
-        //             budding += finder.generate(i, j);
-        //         }
-        //     }
-        // }
-        // println!("Found {} budding amethyst", budding);
-        // // 14399
+    fn generate_20_below_y0() {
+        let mut finder = Geode::new(1, GameVersion::MC20);
+
+        let range = 128;
+        let mut geode_count = 0;
+        for i in -range..=range {
+            for j in -range..=range {
+                if finder.check_chunk_below_y0(i, j) {
+                    geode_count += 1;
+                }
+            }
+        }
+
+        assert_eq!(geode_count, 1803);
+
+        let range = 32;
+        let mut amethyst_count = 0;
+        for i in -range..=range {
+            for j in -range..=range {
+                if finder.check_chunk(i, j) {
+                    amethyst_count += finder.generate_below_y0(i, j);
+                }
+            }
+        }
+
+        assert_eq!(amethyst_count, 4047);
     }
 }
 
