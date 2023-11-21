@@ -95,7 +95,7 @@ const OUTER_THICKNESS: f64 = 4.2;
 
 const CRACK_CHANCE: f64 = 0.95;
 const CRACK_SIZE: f64 = 2.0;
-const CRACK_OFFSET: i32 = 2;
+const CRACK_OFFSET: f64 = 2.0;
 
 const BUDDING_CHANCE: f64 = 0.083;
 const OUTER_WALL_DIST: (i32, i32) = (4, 6);
@@ -106,6 +106,7 @@ const POINT_OFFSET: (i32, i32) = (1, 2);
 const OFFSET: i32 = 16;
 const NOISE_MULTIPLIER: f64 = 0.05;
 
+#[derive(Debug)]
 struct BlockPos {
     x: i32,
     y: i32,
@@ -265,6 +266,8 @@ impl Geode {
 
             let point_offset = self.random.next_between(POINT_OFFSET.0, POINT_OFFSET.1);
             block_list1.push((origin.add(dx, dy, dz), point_offset));
+
+            // let blockpos3 = origin.add(dx, dy, dz);
         }
 
         let mut block_list2: Vec<BlockPos> = vec![];
