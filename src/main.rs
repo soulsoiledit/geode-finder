@@ -48,20 +48,12 @@ struct Args {
     search_radius: u32,
 
     /// Minimum number of geodes per area
-    #[arg(short, long, default_value_t = 25)]
+    #[arg(short, long, default_value_t = 19)]
     geode_threshold: u8,
 
     /// Minimum number of budding amethyst per area
-    #[arg(short, long, default_value_t = 900)]
+    #[arg(short, long, default_value_t = 800)]
     amethyst_threshold: u32,
-
-    /// x coordinate of center chunk
-    #[arg(long, default_value_t = 0)]
-    center_x: i32,
-
-    /// z coordinate of center chunk
-    #[arg(long, default_value_t = 0)]
-    center_z: i32,
 
     /// Number of threads to use
     #[arg(long, default_value_t = 1)]
