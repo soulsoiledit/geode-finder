@@ -103,7 +103,7 @@ const OUTER_WALL_DIST: (i32, i32) = (4, 6);
 const DISTRIBUTION_POINTS: (i32, i32) = (3, 4);
 const POINT_OFFSET: (i32, i32) = (1, 2);
 
-const OFFSET_RANGE: std::ops::Range<i32> = -16..16;
+const OFFSET: i32 = 16;
 const NOISE_MULTIPLIER: f64 = 0.05;
 
 struct BlockPos {
@@ -283,10 +283,12 @@ impl Geode {
         }
 
         let mut budding_count = 0;
-        for z in OFFSET_RANGE {
-            for y in OFFSET_RANGE {
-                for x in OFFSET_RANGE {
-                    let block3 = origin.add(x, y, z);
+
+        for z in (origin.z - OFFSET)..=(origin.z + OFFSET) {
+            for y in (origin.y - OFFSET)..=(origin.y + OFFSET) {
+                for x in (origin.x - OFFSET)..=(origin.x + OFFSET) {
+                    let block3 = BlockPos { x, y, z };
+
                     let r = self
                         .noise
                         .sample(block3.x as f64, block3.y as f64, block3.z as f64)
