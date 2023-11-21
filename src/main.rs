@@ -9,8 +9,8 @@ mod search;
 
 use geode::Geode;
 
-const RANDOM_RANGE: usize = 13;
-const RANDOM_RANGE_OFFSET: i64 = RANDOM_RANGE as i64 + 1;
+const RANDOM_RANGE: usize = 15;
+const RANDOM_RANGE_OFFSET: i64 = RANDOM_RANGE as i64 / 2;
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum GameVersion {
@@ -25,10 +25,6 @@ pub enum GameVersion {
     /// 1.20+
     #[clap(name = "20")]
     MC20,
-
-    /// 1.17 top and 1.18+ bottom
-    #[clap(name = "merged")]
-    MCMerged,
 }
 
 // CLI arguments with clap
@@ -59,15 +55,18 @@ struct Args {
     #[arg(long, default_value_t = 1)]
     threads: u8,
 
-    /// Search Mode
-    #[arg(long, default_value_t = 1)]
-    mode: u8,
+    // TODO: Consider removed merged search
+    /// Perform merged search with 1.17
+    #[arg(long, default_value_t = false)]
+    merged: bool,
+    //
+    // TODO: Add export options (json, json + budding list)
 }
 
 fn initialize_progress_bar(length: u64) -> ProgressBar {
     let progress_style = ProgressStyle::default_spinner()
         .progress_chars("*-")
-        .template("{spinner:.green} [{elapsed}] [{bar:.green/white}] ({eta_precise})")
+        .template("{spinner:.green} [{elapsed_precise}] [{bar:.green/white}] ({eta_precise})")
         .unwrap();
     ProgressBar::new(length).with_style(progress_style)
 }
@@ -75,51 +74,18 @@ fn initialize_progress_bar(length: u64) -> ProgressBar {
 fn main() {
     let args = Args::parse();
 
-    let seed = args.seed;
-    let budding_threshold = args.amethyst_threshold;
-
-    let mut cached_geodes = HashMap::new();
-
-    let mut finder = Geode::new(seed, args.game_version);
-    let locations = search(&mut finder, args);
-
-    for loc in locations {
-        let min_x = loc.0 - RANDOM_RANGE_OFFSET;
-        let max_x = loc.0 + 1;
-        let min_z = loc.1 - RANDOM_RANGE_OFFSET;
-        let max_z = loc.1 + 1;
-
-        let mut area_budding_count = 0;
-        for i in min_x..max_x {
-            for j in min_z..max_z {
-                let count = match cached_geodes.get(&(i, j)) {
-                    Some(cached_count) => *cached_count,
-
-                    None => {
-                        let geode_budding_count = finder.generate(i, j);
-                        cached_geodes.insert((i, j), geode_budding_count);
-                        geode_budding_count
-                    }
-                };
-
-                area_budding_count += count;
-            }
-        }
-
-        if area_budding_count >= budding_threshold as i32 {
-            println!(
-                "Geode cluster with {} budding amethyst centered at {} {}",
-                area_budding_count,
-                (loc.0 - 6) * 16,
-                (loc.1 - 6) * 16
-            );
-        }
-    }
+    if args.merged {
+        budding_merged(args)
+    } else {
+        budding(args)
+    };
 }
 
-fn search(finder: &mut Geode, args: Args) -> Vec<(i64, i64)> {
+fn search(args: Args) -> Vec<(i64, i64)> {
     let search_radius = args.search_radius as i64;
     let geode_threshold = args.geode_threshold as i8;
+
+    let mut finder = Geode::new(args.seed, args.game_version);
 
     let search_length = search_radius as usize * 2 + 1;
     let progress_bar = initialize_progress_bar(search_length as u64);
@@ -160,4 +126,141 @@ fn search(finder: &mut Geode, args: Args) -> Vec<(i64, i64)> {
     println!("{} potential locations found.", locations.len());
 
     locations
+}
+
+fn search_merged(args: Args) -> Vec<(i64, i64)> {
+    let mut finder_17 = Geode::new(args.seed, GameVersion::MC17);
+    let mut finder = Geode::new(args.seed, args.game_version);
+
+    let search_radius = args.search_radius as i64;
+    let geode_threshold = args.geode_threshold as i8;
+
+    let search_length = search_radius as usize * 2 + 1;
+    let progress_bar = initialize_progress_bar(search_length as u64);
+
+    let mut locations: Vec<(i64, i64)> = vec![];
+
+    let mut sum_index: usize = 0;
+    let mut previous_sums = vec![vec![0; search_length]; RANDOM_RANGE];
+    let mut current_sums = vec![0i8; search_length];
+
+    for i in -search_radius..=search_radius {
+        let mut slice = [0; RANDOM_RANGE];
+        let mut slice_index = 0;
+        let mut slice_sum = 0i8;
+
+        for j in -search_radius..=search_radius {
+            let is_geode_17 = finder_17.check_chunk(i, j) as i8;
+            let is_geode = finder.check_chunk_below_y0(i, j) as i8;
+            let total_geodes = is_geode_17 + is_geode;
+
+            slice_sum += total_geodes - slice[slice_index];
+            slice[slice_index] = total_geodes;
+            slice_index = (slice_index + 1) % RANDOM_RANGE;
+
+            let k = (j + search_radius) as usize;
+            current_sums[k] += slice_sum - previous_sums[sum_index][k];
+            previous_sums[sum_index][k] = slice_sum;
+
+            if current_sums[k] >= geode_threshold {
+                locations.push((i, j));
+                println!("Found region with {} geodes", current_sums[k]);
+            }
+        }
+
+        sum_index = (sum_index + 1) % RANDOM_RANGE;
+        progress_bar.inc(1);
+    }
+
+    progress_bar.finish();
+    println!("{} potential locations found.", locations.len());
+
+    locations
+}
+
+fn budding(args: Args) {
+    let amethyst_threshold = args.amethyst_threshold;
+
+    let mut finder = Geode::new(args.seed, args.game_version);
+    let mut cached_geodes: HashMap<(i64, i64), i32> = HashMap::new();
+
+    let locations = search(args);
+    for loc in locations {
+        let min_x = loc.0 + 1 - RANDOM_RANGE as i64;
+        let max_x = loc.0;
+        let min_z = loc.1 + 1 - RANDOM_RANGE as i64;
+        let max_z = loc.1;
+
+        let mut area_budding_count = 0;
+        for i in min_x..=max_x {
+            for j in min_z..=max_z {
+                let count = match cached_geodes.get(&(i, j)) {
+                    Some(cached_count) => *cached_count,
+
+                    None => {
+                        let geode_budding_count = finder.generate(i, j);
+                        cached_geodes.insert((i, j), geode_budding_count);
+                        geode_budding_count
+                    }
+                };
+
+                area_budding_count += count;
+            }
+        }
+
+        if area_budding_count >= amethyst_threshold as i32 {
+            println!(
+                "Geode cluster with {} budding amethyst centered at {} {}",
+                area_budding_count,
+                (loc.0 - RANDOM_RANGE_OFFSET) * 16,
+                (loc.1 - RANDOM_RANGE_OFFSET) * 16
+            );
+        }
+    }
+}
+
+fn budding_merged(args: Args) {
+    let amethyst_threshold = args.amethyst_threshold;
+
+    let mut finder_17 = Geode::new(args.seed, GameVersion::MC17);
+    let mut finder = Geode::new(args.seed, args.game_version);
+
+    let mut cached_geodes: HashMap<(i64, i64), i32> = HashMap::new();
+
+    let locations = search_merged(args);
+    for loc in locations {
+        let min_x = loc.0 + 1 - RANDOM_RANGE as i64;
+        let max_x = loc.0;
+        let min_z = loc.1 + 1 - RANDOM_RANGE as i64;
+        let max_z = loc.1;
+
+        let mut area_budding_count = 0;
+
+        for i in min_x..=max_x {
+            for j in min_z..=max_z {
+                let count = match cached_geodes.get(&(i, j)) {
+                    Some(cached_count) => *cached_count,
+
+                    None => {
+                        let geode_budding_count =
+                            finder_17.generate(i, j) + finder.generate_below_y0(i, j);
+
+                        cached_geodes.insert((i, j), geode_budding_count);
+                        geode_budding_count
+                    }
+                };
+
+                area_budding_count += count;
+            }
+        }
+
+        if area_budding_count >= amethyst_threshold as i32 {
+            println!(
+                "Geode cluster with {} budding amethyst centered at {} {}",
+                area_budding_count,
+                (loc.0 - RANDOM_RANGE_OFFSET) * 16,
+                (loc.1 - RANDOM_RANGE_OFFSET) * 16
+            );
+        }
+    }
 }
