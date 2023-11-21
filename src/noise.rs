@@ -14,8 +14,6 @@ mod tests {
     fn perlin_noise() {
         let mut random = JavaRandom::with_seed(1);
         let noise = PerlinNoiseSampler::new(&mut random);
-
-        println!("{}", MIN);
         assert_eq!(noise.sample(MIN, MIN, MIN), 0.14366490380632846);
         assert_eq!(noise.sample(ZERO, ZERO, ZERO), 0.10709059654197703);
         assert_eq!(noise.sample(MAX, MAX, MAX), 0.14366490380632846);
