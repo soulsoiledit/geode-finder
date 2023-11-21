@@ -337,6 +337,142 @@ impl Geode {
 
         budding_count
     }
+
+    pub fn check_chunk_below_y0(&mut self, chunk_x: i64, chunk_z: i64) -> bool {
+        self.set_decorator_seed(chunk_x, chunk_z);
+
+        if self.random.next_float() < self.chance {
+            // Skip calls for x and z coordinate
+            self.random.skip(2);
+            let y = self.random.next_between(self.y_min, self.y_max);
+
+            return y < 0;
+        }
+
+        false
+    }
+
+    pub fn generate_below_y0(&mut self, chunk_x: i64, chunk_z: i64) -> i32 {
+        if !self.check_chunk(chunk_x, chunk_z) {
+            return 0;
+        }
+
+        let origin = BlockPos {
+            x: self.random.next_int(16) + 16 * chunk_x as i32,
+            z: self.random.next_int(16) + 16 * chunk_z as i32,
+            y: self.random.next_between(self.y_min, self.y_max),
+        };
+
+        if origin.y >= 0 {
+            return 0;
+        }
+
+        let distribution_points = self
+            .random
+            .next_between(DISTRIBUTION_POINTS.0, DISTRIBUTION_POINTS.1);
+        let d: f64 = (distribution_points as f64) / OUTER_WALL_DIST.1 as f64;
+
+        let inv_filling_thickness = real_inverse_sqrt(FILLER_THICKNESS);
+        let inv_inner_thickness = real_inverse_sqrt(INNER_THICKNESS + d);
+        let inv_outer_thickness = real_inverse_sqrt(OUTER_THICKNESS + d);
+
+        let l = real_inverse_sqrt(
+            CRACK_SIZE
+                + self.random.next_double() / 2.0
+                + if distribution_points > 3 { d } else { 0.0 },
+        );
+
+        let generate_crack = (self.random.next_float() as f64) < CRACK_CHANCE;
+
+        let mut block_list1: Vec<(BlockPos, i32)> = vec![];
+        for _ in 0..distribution_points {
+            let dx = self
+                .random
+                .next_between(OUTER_WALL_DIST.0, OUTER_WALL_DIST.1);
+            let dy = self
+                .random
+                .next_between(OUTER_WALL_DIST.0, OUTER_WALL_DIST.1);
+            let dz = self
+                .random
+                .next_between(OUTER_WALL_DIST.0, OUTER_WALL_DIST.1);
+
+            let point_offset = self.random.next_between(POINT_OFFSET.0, POINT_OFFSET.1);
+            block_list1.push((origin.add(dx, dy, dz), point_offset));
+
+            // let blockpos3 = origin.add(dx, dy, dz);
+        }
+
+        let mut block_list2: Vec<BlockPos> = vec![];
+        if generate_crack {
+            let n = self.random.next_int(4);
+            let o = distribution_points * 2 + 1;
+
+            let dx = if n == 0 || n == 2 { o } else { 0 };
+            let dz = if n == 1 || n == 2 { o } else { 0 };
+
+            block_list2 = vec![
+                origin.add(dx, 7, dz),
+                origin.add(dx, 5, dz),
+                origin.add(dx, 1, dz),
+            ];
+        }
+
+        let mut budding_count = 0;
+
+        for z in (origin.z - OFFSET)..=(origin.z + OFFSET) {
+            for y in (origin.y - OFFSET)..=(origin.y + OFFSET) {
+                for x in (origin.x - OFFSET)..=(origin.x + OFFSET) {
+                    let block3 = BlockPos { x, y, z };
+
+                    let r = self
+                        .noise
+                        .sample(block3.x as f64, block3.y as f64, block3.z as f64)
+                        * NOISE_MULTIPLIER;
+                    let mut s: f64 = 0.0;
+                    let mut t: f64 = 0.0;
+
+                    for (coord, val) in &block_list1 {
+                        s += (self.inverse_sqrt)(
+                            (self.find_squared_distance)(&block3, coord) + (*val as f64),
+                        );
+                    }
+                    s += r * block_list1.len() as f64;
+
+                    for block4 in &block_list2 {
+                        t += (self.inverse_sqrt)(
+                            (self.find_squared_distance)(&block3, block4) + CRACK_OFFSET,
+                        );
+                    }
+                    t += r * block_list2.len() as f64;
+
+                    if s < inv_outer_thickness {
+                        continue;
+                    }
+
+                    if generate_crack && t >= l && s < inv_filling_thickness {
+                        continue;
+                    }
+
+                    if s >= inv_filling_thickness {
+                        continue;
+                    }
+
+                    if s >= inv_inner_thickness {
+                        let place_budding = (self.random.next_float() as f64) < BUDDING_CHANCE;
+
+                        if place_budding {
+                            if block3.y < 0 {
+                                budding_count += 1;
+                            }
+                            self.random.skip(1);
+                        }
+                    }
+                }
+            }
+        }
+
+        budding_count
+    }
 }
 
 // How should geode struct work
