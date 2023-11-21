@@ -273,7 +273,7 @@ impl Geode {
             let o = distribution_points * 2 + 1;
 
             let dx = if n == 0 || n == 2 { o } else { 0 };
-            let dz = if n == 1 || n == 3 { o } else { 0 };
+            let dz = if n == 1 || n == 2 { o } else { 0 };
 
             block_list2 = vec![
                 origin.add(dx, 7, dz),
