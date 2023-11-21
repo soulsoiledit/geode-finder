@@ -328,7 +328,7 @@ impl Geode {
 
                         if place_budding {
                             budding_count += 1;
-                            self.random.next_float();
+                            self.random.skip(1);
                         }
                     }
                 }
