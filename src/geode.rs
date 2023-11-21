@@ -156,62 +156,50 @@ pub struct Geode {
 
 impl Geode {
     pub fn new(seed: i64, game_version: GameVersion) -> Self {
+        let mut random: Box<dyn Random> = match game_version {
+            GameVersion::MC17 => Box::new(JavaRandom::with_seed(seed)),
+            _ => Box::new(Xoroshiro128PlusPlusRandom::with_seed(seed)),
+        };
+
+        let chance = match game_version {
+            GameVersion::MC17 => 1.0 / 53.0,
+            _ => 1.0 / 24.0,
+        };
+
+        let salt = match game_version {
+            GameVersion::MC17 => 20000,
+            _ => 20002,
+        };
+
+        let (y_min, y_max) = match game_version {
+            GameVersion::MC17 => (6, 46),
+            _ => (-58, 30),
+        };
+
+        let find_squared_distance = match game_version {
+            GameVersion::MC17 => find_squared_distance_17,
+            _ => find_squared_distance_18,
+        };
+
+        let inverse_sqrt = match game_version {
+            GameVersion::MC20 => real_inverse_sqrt,
+            _ => fast_inverse_sqrt,
+        };
+
         let mut noise_random = JavaRandom::with_seed(seed);
 
-        match game_version {
-            GameVersion::MC17 => {
-                let mut random = Box::new(JavaRandom::with_seed(seed));
-
-                Geode {
-                    a: random.next_long() | 1,
-                    b: random.next_long() | 1,
-                    random,
-                    seed,
-                    chance: 1.0 / 53.0,
-                    salt: 20000,
-                    y_min: 6,
-                    y_max: 46,
-                    noise: DoublePerlinNoiseSampler::new(&mut noise_random, game_version),
-                    inverse_sqrt: fast_inverse_sqrt,
-                    find_squared_distance: find_squared_distance_17,
-                }
-            }
-
-            GameVersion::MC20 => {
-                let mut random = Box::new(Xoroshiro128PlusPlusRandom::with_seed(seed));
-
-                Geode {
-                    a: random.next_long() | 1,
-                    b: random.next_long() | 1,
-                    random,
-                    seed,
-                    chance: 1.0 / 24.0,
-                    salt: 20002,
-                    y_min: -58,
-                    y_max: 30,
-                    noise: DoublePerlinNoiseSampler::new(&mut noise_random, game_version),
-                    inverse_sqrt,
-                    find_squared_distance: find_squared_distance_18,
-                }
-            }
-
-            _ => {
-                let mut random = Box::new(Xoroshiro128PlusPlusRandom::with_seed(seed));
-
-                Geode {
-                    a: random.next_long() | 1,
-                    b: random.next_long() | 1,
-                    random,
-                    seed,
-                    chance: 1.0 / 24.0,
-                    salt: 20002,
-                    y_min: -58,
-                    y_max: 30,
-                    noise: DoublePerlinNoiseSampler::new(&mut noise_random, game_version),
-                    inverse_sqrt: fast_inverse_sqrt,
-                    find_squared_distance: find_squared_distance_18,
-                }
-            }
+        Geode {
+            seed_high: random.next_long() | 1,
+            seed_low: random.next_long() | 1,
+            chance,
+            seed,
+            salt,
+            y_min,
+            y_max,
+            inverse_sqrt,
+            find_squared_distance,
+            random,
+            noise: DoublePerlinNoiseSampler::new(&mut noise_random, game_version),
         }
     }
 
