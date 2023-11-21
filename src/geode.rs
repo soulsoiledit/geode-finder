@@ -8,6 +8,14 @@ use crate::GameVersion;
 mod tests {
     use super::*;
 
+    // #[test]
+    // TODO: decouple this from random
+    // fn fast_inv_sqrt() {
+    // let mut random = Xoroshiro128PlusPlusRandom::with_seed(1);
+    // assert_eq!(fast_inverse_sqrt(random.next_double()), 1.0274868578944794);
+    // assert_eq!(fast_inverse_sqrt(random.next_double()), 1.0526759381538786);
+    // assert_eq!(fast_inverse_sqrt(random.next_double()), 1.5075261791112862);
+    // }
 
     // TODO: get real values for these too
     // #[test]
@@ -135,8 +143,7 @@ fn fast_inverse_sqrt(x: f64) -> f64 {
     y * (1.5 - (0.5 * &x) * y * y)
 }
 
-// TODO: 1.20+ uses proper hardware inv sqrt
-fn inverse_sqrt(x: f64) -> f64 {
+fn real_inverse_sqrt(x: f64) -> f64 {
     1.0 / x.sqrt()
 }
 
@@ -232,11 +239,11 @@ impl Geode {
             .next_between(DISTRIBUTION_POINTS.0, DISTRIBUTION_POINTS.1);
         let d: f64 = (distribution_points as f64) / OUTER_WALL_DIST.1 as f64;
 
-        let inv_filling_thickness = inverse_sqrt(FILLER_THICKNESS);
-        let inv_inner_thickness = inverse_sqrt(INNER_THICKNESS + d);
-        let inv_outer_thickness = inverse_sqrt(OUTER_THICKNESS + d);
+        let inv_filling_thickness = real_inverse_sqrt(FILLER_THICKNESS);
+        let inv_inner_thickness = real_inverse_sqrt(INNER_THICKNESS + d);
+        let inv_outer_thickness = real_inverse_sqrt(OUTER_THICKNESS + d);
 
-        let l = inverse_sqrt(
+        let l = real_inverse_sqrt(
             CRACK_SIZE
                 + self.random.next_double() / 2.0
                 + if distribution_points > 3 { d } else { 0.0 },
@@ -284,8 +291,8 @@ impl Geode {
                         .noise
                         .sample(block3.x as f64, block3.y as f64, block3.z as f64)
                         * NOISE_MULTIPLIER;
-                    let mut s = 0f64;
-                    let mut t = 0f64;
+                    let mut s: f64 = 0.0;
+                    let mut t: f64 = 0.0;
 
                     for (coord, val) in &block_list1 {
                         s += (self.inverse_sqrt)(
