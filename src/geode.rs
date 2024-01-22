@@ -133,6 +133,12 @@ pub struct Geode {
     find_squared_distance: fn(pos1: &BlockPos, pos2: &BlockPos) -> f64,
 }
 
+pub struct GeodeOutput {
+    count: i32,
+    chunks: Vec<(i64, i64)>,
+    budding: Vec<BlockPos>,
+}
+
 impl Geode {
     pub fn new(seed: i64, game_version: GameVersion) -> Self {
         let mut random: Box<dyn Random> = match game_version {
@@ -183,11 +189,11 @@ impl Geode {
     }
 
     pub fn set_decorator_seed(&mut self, chunk_x: i64, chunk_z: i64) {
-        let bx = chunk_x.wrapping_shl(4).wrapping_mul(self.seed_high);
-        let bz = chunk_z.wrapping_shl(4).wrapping_mul(self.seed_low);
-        let pop_seed = bx.wrapping_add(bz) ^ self.seed;
-        let dec_seed = pop_seed.wrapping_add(self.salt);
-        self.random.set_seed(dec_seed);
+        let x = (chunk_x * 16).wrapping_mul(self.seed_high);
+        let z = (chunk_z * 16).wrapping_mul(self.seed_low);
+        let population_seed = x.wrapping_add(z) ^ self.seed;
+        let decorator_seed = population_seed.wrapping_add(self.salt);
+        self.random.set_seed(decorator_seed);
     }
 
     pub fn check_chunk(&mut self, chunk_x: i64, chunk_z: i64) -> bool {
@@ -273,16 +279,14 @@ impl Geode {
                     for (coord, val) in &block_list1 {
                         s += (self.inverse_sqrt)(
                             (self.find_squared_distance)(&block3, coord) + (*val as f64),
-                        );
+                        ) + r;
                     }
-                    s += r * block_list1.len() as f64;
 
                     for block4 in &block_list2 {
                         t += (self.inverse_sqrt)(
                             (self.find_squared_distance)(&block3, block4) + CRACK_OFFSET,
-                        );
+                        ) + r;
                     }
-                    t += r * block_list2.len() as f64;
 
                     if s < inv_outer_thickness {
                         continue;

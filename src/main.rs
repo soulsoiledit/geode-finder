@@ -9,7 +9,7 @@ mod search;
 
 use geode::Geode;
 
-const RANDOM_RANGE: usize = 15;
+const RANDOM_RANGE: usize = 13;
 const RANDOM_RANGE_OFFSET: i64 = RANDOM_RANGE as i64 / 2;
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
@@ -39,6 +39,7 @@ struct Args {
     #[arg(short, long, allow_hyphen_values = true, default_value_t = 0)]
     seed: i64,
 
+    // add starting coordinates
     /// Search radius
     #[arg(short = 'r', long, default_value_t = 1000)]
     search_radius: u32,
