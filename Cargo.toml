@@ -1,6 +1,6 @@
 [package]
 name = "geode-finder"
-version = "1.0.2"
+version = "1.0.3"
 authors = ["soiledit <soulsoill@proton.me>"]
 license = "MIT"
 description = "Tool to search for geodes and budding amethyst in a Minecraft world"
