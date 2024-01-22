@@ -39,7 +39,6 @@ struct Args {
     #[arg(short, long, allow_hyphen_values = true, default_value_t = 0)]
     seed: i64,
 
-    // add starting coordinates
     /// Search radius
     #[arg(short = 'r', long, default_value_t = 1000)]
     search_radius: u32,
@@ -52,10 +51,17 @@ struct Args {
     #[arg(short, long, default_value_t = 800)]
     amethyst_threshold: u32,
 
+    /// Start X
+    #[arg(long, default_value_t = 0)]
+    start_x: u32,
+
+    /// Start Z
+    #[arg(long, default_value_t = 0)]
+    start_z: u32,
+
     /// Number of threads to use
     #[arg(long, default_value_t = 1)]
     threads: u8,
-    //
     // TODO: Add export options (json, json + budding list)
 }
 
@@ -73,6 +79,8 @@ fn main() {
 }
 
 fn search(args: Args) -> Vec<(i64, i64)> {
+    let start_x = args.start_x as i64;
+    let start_z = args.start_z as i64;
     let search_radius = args.search_radius as i64;
     let geode_threshold = args.geode_threshold as i8;
 
@@ -87,25 +95,27 @@ fn search(args: Args) -> Vec<(i64, i64)> {
     let mut previous_sums = vec![vec![0; search_length]; RANDOM_RANGE];
     let mut current_sums = vec![0i8; search_length];
 
-    for i in -search_radius..=search_radius {
+    let x_iter = (start_x - search_radius)..=(start_x + search_radius);
+    let z_iter = (start_z - search_radius)..=(start_z + search_radius);
+
+    for chunk_x in x_iter {
         let mut slice = [0; RANDOM_RANGE];
         let mut slice_index = 0;
         let mut slice_sum = 0i8;
 
-        for j in -search_radius..=search_radius {
-            let is_geode = finder.check_chunk(i, j) as i8;
+        for (z_index, chunk_z) in z_iter.clone().enumerate() {
+            let is_geode = finder.check_chunk(chunk_x, chunk_z) as i8;
 
             slice_sum += is_geode - slice[slice_index];
             slice[slice_index] = is_geode;
             slice_index = (slice_index + 1) % RANDOM_RANGE;
 
-            let k = (j + search_radius) as usize;
-            current_sums[k] += slice_sum - previous_sums[sum_index][k];
-            previous_sums[sum_index][k] = slice_sum;
+            current_sums[z_index] += slice_sum - previous_sums[sum_index][z_index];
+            previous_sums[sum_index][z_index] = slice_sum;
 
-            if current_sums[k] >= geode_threshold {
-                locations.push((i, j));
-                println!("Found region with {} geodes", current_sums[k]);
+            if current_sums[z_index] >= geode_threshold {
+                locations.push((chunk_x, chunk_z));
+                println!("Found region with {} geodes", current_sums[z_index]);
             }
         }
 
