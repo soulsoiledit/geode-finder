@@ -21,11 +21,13 @@ This guide assumes that you already have Rust and Cargo installed and working.
 1. To see a list of all available arguments and defaults, run the executable with the `--help` argument. The defaults are helpful to minimize the amount of searching done.
 
 2. Set the variables accordingly and run the program (`./geode-finder`):
-- `--seed`: the seed of the world that you want to search in (default: 177013)
-- `--search-radius`: the radius of chunks to search through (default: 10000)
-- `--geode-threshold`: the minimum number of geodes in random tick range (default: 26)
-- `--budding-threshold`: the minimum number of budding amethyst in random tick range (default: 1000)
-- `--game-version`: the game version to use (1.18 or 1.17)
+- `--game-version`: the game version to use (1.17, 1.18-1.19, 1.20+)
+- `--seed`: the seed of the world that you want to search in (default: 0)
+- `--search-radius`: the radius of chunks to search through (default: 1000)
+- `--geode-threshold`: the minimum number of geodes in random tick range (default: 19)
+- `--amethyst-threshold`: the minimum number of budding amethyst in random tick range (default: 800)
+- `--start-x`: the x coordinate of the chunk to start the search from, in chunks (default: 0)
+- `--start-z`: the z coordinate of the chunk to start the search from, in chunks (default: 0)
 
 3. The program will produce a list of coordinates of the center chunks of each valid location.
 
