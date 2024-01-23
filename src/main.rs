@@ -1,4 +1,4 @@
-use clap::{Parser, ValueEnum};
+use clap::{builder::RangedI64ValueParser, Parser, ValueEnum};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
 
@@ -52,12 +52,12 @@ struct Args {
     amethyst_threshold: u32,
 
     /// Start X
-    #[arg(long, default_value_t = 0)]
-    start_x: u32,
+    #[arg(long, allow_hyphen_values = true, default_value_t = 0)]
+    start_x: i64,
 
     /// Start Z
-    #[arg(long, default_value_t = 0)]
-    start_z: u32,
+    #[arg(long, allow_hyphen_values = true, default_value_t = 0)]
+    start_z: i64,
 
     /// Number of threads to use
     #[arg(long, default_value_t = 1)]
@@ -79,8 +79,8 @@ fn main() {
 }
 
 fn search(args: Args) -> Vec<(i64, i64)> {
-    let start_x = args.start_x as i64;
-    let start_z = args.start_z as i64;
+    let start_x = args.start_x;
+    let start_z = args.start_z;
     let search_radius = args.search_radius as i64;
     let geode_threshold = args.geode_threshold as i8;
 
