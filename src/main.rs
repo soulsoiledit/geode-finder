@@ -1,4 +1,4 @@
-use clap::{builder::RangedI64ValueParser, Parser, ValueEnum};
+use clap::{Parser, ValueEnum};
 use indicatif::{ProgressBar, ProgressStyle};
 use std::collections::HashMap;
 
@@ -8,9 +8,6 @@ mod random;
 mod search;
 
 use geode::Geode;
-
-const RANDOM_RANGE: usize = 13;
-const RANDOM_RANGE_OFFSET: i64 = RANDOM_RANGE as i64 / 2;
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum GameVersion {
@@ -42,6 +39,10 @@ struct Args {
     /// Search radius
     #[arg(short = 'r', long, default_value_t = 1000)]
     search_radius: u32,
+
+    /// Random tick radius, adjust only in MC versions 1.21.5+
+    #[arg(long, default_value_t = 6)]
+    random_tick_radius: usize,
 
     /// Minimum number of geodes per area
     #[arg(short, long, default_value_t = 19)]
@@ -82,6 +83,8 @@ fn search(args: Args) -> Vec<(i64, i64)> {
     let start_x = args.start_x;
     let start_z = args.start_z;
     let search_radius = args.search_radius as i64;
+    let random_range = args.random_tick_radius * 2 + 1;
+
     let geode_threshold = args.geode_threshold as i8;
 
     let mut finder = Geode::new(args.seed, args.game_version);
@@ -92,14 +95,14 @@ fn search(args: Args) -> Vec<(i64, i64)> {
     let mut locations: Vec<(i64, i64)> = vec![];
 
     let mut sum_index: usize = 0;
-    let mut previous_sums = vec![vec![0; search_length]; RANDOM_RANGE];
+    let mut previous_sums = vec![vec![0; search_length]; random_range];
     let mut current_sums = vec![0i8; search_length];
 
     let x_iter = (start_x - search_radius)..=(start_x + search_radius);
     let z_iter = (start_z - search_radius)..=(start_z + search_radius);
 
     for chunk_x in x_iter {
-        let mut slice = [0; RANDOM_RANGE];
+        let mut slice = vec![0; random_range];
         let mut slice_index = 0;
         let mut slice_sum = 0i8;
 
@@ -108,7 +111,7 @@ fn search(args: Args) -> Vec<(i64, i64)> {
 
             slice_sum += is_geode - slice[slice_index];
             slice[slice_index] = is_geode;
-            slice_index = (slice_index + 1) % RANDOM_RANGE;
+            slice_index = (slice_index + 1) % random_range;
 
             current_sums[z_index] += slice_sum - previous_sums[sum_index][z_index];
             previous_sums[sum_index][z_index] = slice_sum;
@@ -119,7 +122,7 @@ fn search(args: Args) -> Vec<(i64, i64)> {
             }
         }
 
-        sum_index = (sum_index + 1) % RANDOM_RANGE;
+        sum_index = (sum_index + 1) % random_range;
         progress_bar.inc(1);
     }
 
@@ -131,15 +134,17 @@ fn search(args: Args) -> Vec<(i64, i64)> {
 
 fn budding(args: Args) {
     let amethyst_threshold = args.amethyst_threshold;
+    let random_tick_radius = args.random_tick_radius as i64;
+    let random_range = random_tick_radius * 2 + 1;
 
     let mut finder = Geode::new(args.seed, args.game_version);
     let mut cached_geodes: HashMap<(i64, i64), i32> = HashMap::new();
 
     let locations = search(args);
     for loc in locations {
-        let min_x = loc.0 + 1 - RANDOM_RANGE as i64;
+        let min_x = loc.0 + 1 - random_range as i64;
         let max_x = loc.0;
-        let min_z = loc.1 + 1 - RANDOM_RANGE as i64;
+        let min_z = loc.1 + 1 - random_range as i64;
         let max_z = loc.1;
 
         let mut area_budding_count = 0;
@@ -163,8 +168,8 @@ fn budding(args: Args) {
             println!(
                 "Geode cluster with {} budding amethyst centered at {} {}",
                 area_budding_count,
-                (loc.0 - RANDOM_RANGE_OFFSET) * 16,
-                (loc.1 - RANDOM_RANGE_OFFSET) * 16
+                (loc.0 - random_tick_radius) * 16,
+                (loc.1 - random_tick_radius) * 16
             );
         }
     }
