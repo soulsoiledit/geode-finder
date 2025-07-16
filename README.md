@@ -21,11 +21,13 @@ This guide assumes that you already have Rust and Cargo installed and working.
 1. To see a list of all available arguments and defaults, run the executable with the `--help` argument. The defaults are helpful to minimize the amount of searching done.
 
 2. Set the variables accordingly and run the program (`./geode-finder`):
+
 - `--game-version`: the game version to use (1.17, 1.18-1.19, 1.20+)
 - `--seed`: the seed of the world that you want to search in (default: 0)
 - `--search-radius`: the radius of chunks to search through (default: 1000)
 - `--geode-threshold`: the minimum number of geodes in random tick range (default: 19)
 - `--amethyst-threshold`: the minimum number of budding amethyst in random tick range (default: 800)
+- `--random-tick-radius`: the radius of the random tick range in chunks (default: 6)
 - `--start-x`: the x coordinate of the chunk to start the search from, in chunks (default: 0)
 - `--start-z`: the z coordinate of the chunk to start the search from, in chunks (default: 0)
 
@@ -33,7 +35,7 @@ This guide assumes that you already have Rust and Cargo installed and working.
 
 4. If you have Carpet mod installed, I've included a helper script to facilitate world pregeneration. Copy the list of valid geode locations to `[worldname]/scripts/shared/geodes.txt` and place `geodegen.sc` inside the `[worldname]/scripts` directory. Load the script and begin the search with `./geodegen`.
 
-5. You can now use the region files from your world in this [Geode AFK Spot Finder](https://russellsprouts.github.io/minecraft-amethyst-tool/) tool to obtain the best locations. 
+5. You can now use the region files from your world in this [Geode AFK Spot Finder](https://russellsprouts.github.io/minecraft-amethyst-tool/) tool to obtain the best locations.
 
 ## Todo
 
