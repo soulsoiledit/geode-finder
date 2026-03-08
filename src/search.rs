@@ -1,3 +1,0 @@
-trait Search {
-    fn search() {}
-}

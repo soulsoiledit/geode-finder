@@ -1,16 +1,16 @@
 [package]
 name = "geode-finder"
-version = "1.1.0"
-authors = ["soiledit <soulsoill@proton.me>"]
-license = "MIT"
-description = "Tool to search for geodes and budding amethyst in a Minecraft world"
-readme = "README.md"
-homepage = "https://github.com/soulsoiledit/geode-finder"
+version = "2.0.0"
+edition = "2024"
+description = "Tool to search for geodes and budding amethyst clusters in a Minecraft world"
 repository = "https://github.com/soulsoiledit/geode-finder"
-keywords = ["minecraft", "geode", "finder", "search"]
+license = "MIT"
+keywords = ["minecraft", "amethyst", "geode", "finder", "search"]
 categories = ["command-line-utilities"]
-edition = "2021"
 
 [dependencies]
-clap = { version = "4.1.1", features = ["derive"] }
-indicatif = "0.17.3"
+clap = { version = "4.5.50", features = ["derive"] }
+indicatif = "0.18.0"
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+statrs = "0.18.0"
