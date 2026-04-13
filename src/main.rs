@@ -151,7 +151,7 @@ fn search_geodes<V: Version>(args: &Args) -> Vec<Cluster> {
     let start_z = args.center_z - i64::from(args.search_radius);
 
     let mut geode = Geode::<V>::new(args.seed);
-    let mut history: Vec<u32> = vec![0; search_diameter * loaded_diameter];
+    let mut history: Vec<u8> = vec![0; search_diameter * loaded_diameter];
     let mut column_sum: Vec<u32> = vec![0; search_diameter];
     let mut clusters: Vec<Cluster> = vec![];
 
@@ -172,19 +172,19 @@ fn search_geodes<V: Version>(args: &Args) -> Vec<Cluster> {
 
         let mut geode_count = 0;
         let slice: usize = (idz % loaded_diameter) * search_diameter;
-        let current: &mut [u32] = &mut history[slice..slice + search_diameter];
+        let current: &mut [u8] = &mut history[slice..slice + search_diameter];
 
         for idx in 0..search_diameter {
             let x = start_x + idx as i64;
 
-            let old_geode = current[idx];
+            let old_geode = &mut current[idx];
             let column = &mut column_sum[idx];
-            let is_geode = geode.check_fast(x, z);
+            let is_geode = u8::from(geode.check_fast(x, z));
 
-            *column += is_geode;
-            *column -= old_geode;
+            *column += u32::from(is_geode);
+            *column -= u32::from(*old_geode);
             geode_count += *column;
-            current[idx] = is_geode;
+            *old_geode = is_geode;
 
             if let Some(old_column) = idx.checked_sub(loaded_diameter) {
                 geode_count -= column_sum[old_column];

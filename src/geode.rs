@@ -41,9 +41,10 @@ impl<V: Version> Geode<V> {
         self.random.next_float() < V::CHANCE
     }
 
-    pub fn check_fast(&mut self, chunk_x: i64, chunk_z: i64) -> u32 {
+    pub fn check_fast(&mut self, chunk_x: i64, chunk_z: i64) -> bool {
         self.set_feature_seed(chunk_x, chunk_z);
-        u32::from(self.random.next_bits(24) < Self::CHANCE_INT)
+        // uses derived int constant to avoid float division and <= for parity
+        self.random.next_bits(24) <= Self::CHANCE_INT
     }
 
     pub fn generate(&mut self, chunk_x: i64, chunk_z: i64) -> u32 {
@@ -161,12 +162,12 @@ mod tests {
         for cx in start..=end {
             for cz in start..=end {
                 geode_count += geode.check(cx, cz) as u32;
-                fast_geode_count += geode.check_fast(cx, cz);
+                fast_geode_count += u8::from(geode.check_fast(cx, cz));
                 budding_count += geode.generate(cx, cz);
             }
         }
 
-        assert!(geode_count == fast_geode_count);
+        assert!(geode_count == u32::from(fast_geode_count));
         TestGeodeResult {
             geode_count,
             budding_count,
