@@ -21,3 +21,5 @@ target
 #.idea/
 
 /output.json
+/flamegraph.svg
+/perf.data*
