@@ -17,7 +17,7 @@ use std::{collections::HashMap, fmt, fs, io, path};
 const WORLD_LIMIT: i64 = 30_000_000 / 16;
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
-pub enum MinecraftVersion {
+pub enum VersionArgument {
     /// 1.17
     #[clap(name = "1.17")]
     MC17,
@@ -34,9 +34,9 @@ pub enum MinecraftVersion {
 macro_rules! versioned {
     ($ver:expr, $fn:ident, $($x:expr),*) => {
         match $ver {
-            MinecraftVersion::MC17 => $fn::<MC17>($($x),*),
-            MinecraftVersion::MC18 => $fn::<MC18>($($x),*),
-            MinecraftVersion::MC19 => $fn::<MC19>($($x),*),
+            VersionArgument::MC17 => $fn::<MC17>($($x),*),
+            VersionArgument::MC18 => $fn::<MC18>($($x),*),
+            VersionArgument::MC19 => $fn::<MC19>($($x),*),
         }
     };
 }
@@ -53,8 +53,8 @@ fn parse_search_radius() -> RangedI64ValueParser<u32> {
 #[command(author, version, about, long_about=None)]
 struct Args {
     /// Minecraft version
-    #[arg(short, long, value_enum, default_value_t = MinecraftVersion::MC19)]
-    minecraft_version: MinecraftVersion,
+    #[arg(short, long, value_enum, default_value_t = VersionArgument::MC19)]
+    minecraft_version: VersionArgument,
 
     /// World seed
     #[arg(short, long, allow_hyphen_values = true, default_value_t = 0)]
@@ -273,7 +273,7 @@ mod tests {
 
     fn test_args() -> Args {
         Args {
-            minecraft_version: MinecraftVersion::MC19,
+            minecraft_version: VersionArgument::MC19,
             seed: 0,
             search_radius: 1000,
             geode_threshold: 20,
