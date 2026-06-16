@@ -183,7 +183,7 @@ public class Geode implements ModInitializer {
 			testNoise("normal", r -> NormalNoise.create(r, OFFSET, AMPLITUDES)::getValue);
 			int[] salt = getSalt(server);
 			testGeode("near", NEAR, server, salt);
-			testGeode("near", FAR, server, salt);
+			testGeode("far", FAR, server, salt);
 		});
 	}
 }
