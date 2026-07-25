@@ -161,7 +161,7 @@ fn search_geodes<V: Version>(args: &Args) -> Vec<Cluster> {
         ProgressBar::new(search_diameter as u64)
             .with_style(
                 ProgressStyle::with_template(
-                    "[{bar}] {msg} potential clusters found ({eta_precise} left)",
+                    "[{bar}] {percent_precise}% ({eta_precise} left), {msg} potential clusters found ",
                 )
                 .unwrap(),
             )
