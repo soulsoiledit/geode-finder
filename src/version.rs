@@ -1,5 +1,5 @@
 use crate::{
-    math::{Block, JavaRandom, Random, UniformInt, Xoroshiro128PlusPlusRandom, inv_sqrt},
+    math::{self, Block, JavaRandom, Random, UniformInt, Xoroshiro128PlusPlusRandom},
     noise::{ImprovedNoise, NormalNoise, PerlinNoise},
 };
 
@@ -83,6 +83,6 @@ impl Version for MC19 {
     type RANDOM = Xoroshiro128PlusPlusRandom;
 
     fn inv_sqrt(val: f64) -> f64 {
-        inv_sqrt(val)
+        math::inv_sqrt(val)
     }
 }

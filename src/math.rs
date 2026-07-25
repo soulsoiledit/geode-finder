@@ -88,7 +88,7 @@ impl Xoroshiro128PlusPlusRandom {
     const STAFFORD_2: u64 = 0x94D0_49BB_1331_11EB;
 
     // splitmix64
-    const fn mix_stafford_13(&self, z: i64) -> i64 {
+    const fn mix_stafford_13(z: i64) -> i64 {
         let mut z = z.cast_unsigned();
         z = (z ^ z.wrapping_shr(30)).wrapping_mul(Self::STAFFORD_1);
         z = (z ^ z.wrapping_shr(27)).wrapping_mul(Self::STAFFORD_2);
@@ -109,8 +109,8 @@ impl Random for Xoroshiro128PlusPlusRandom {
     fn set_seed(&mut self, seed: i64) {
         let seed_lo = seed ^ Self::SILVER_RATIO;
         let seed_hi = seed_lo.wrapping_add(Self::GOLDEN_RATIO);
-        self.seed_lo = self.mix_stafford_13(seed_lo);
-        self.seed_hi = self.mix_stafford_13(seed_hi);
+        self.seed_lo = Self::mix_stafford_13(seed_lo);
+        self.seed_hi = Self::mix_stafford_13(seed_hi);
     }
 
     fn next_bits(&mut self, bits: u32) -> i32 {

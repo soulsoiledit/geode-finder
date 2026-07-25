@@ -7,14 +7,14 @@ use crate::{
     geode::Geode,
     version::{MC17, MC18, MC19, Version},
 };
-use clap::{Parser, ValueEnum, ValueHint::FilePath, builder::RangedI64ValueParser, value_parser};
+use clap::{Parser, ValueEnum, ValueHint, value_parser};
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::Serialize;
-use serde_json::to_writer_pretty;
 use statrs::distribution::{Binomial, DiscreteCDF};
 use std::{collections::HashMap, fmt, fs, io, path};
 
 const WORLD_LIMIT: i64 = 30_000_000 / 16;
+const WORLD_RANGE: std::ops::RangeInclusive<i64> = -WORLD_LIMIT..=WORLD_LIMIT;
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum VersionArgument {
@@ -41,14 +41,6 @@ macro_rules! versioned {
     };
 }
 
-fn parse_chunk_coord() -> RangedI64ValueParser {
-    value_parser!(i64).range(-WORLD_LIMIT..=WORLD_LIMIT)
-}
-
-fn parse_search_radius() -> RangedI64ValueParser<u32> {
-    value_parser!(u32).range(1..=WORLD_LIMIT)
-}
-
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about=None)]
 struct Args {
@@ -61,31 +53,31 @@ struct Args {
     seed: i64,
 
     /// Search radius
-    #[arg(short = 'r', long, default_value_t = 1000, value_parser = parse_search_radius())]
+    #[arg(short = 'r', long, default_value_t = 1000, value_parser = value_parser!(u32).range(1..=WORLD_LIMIT))]
     search_radius: u32,
 
     /// Minimum number of geodes per loaded area
-    #[arg(short, long, default_value_t = 20)]
+    #[arg(short, long, default_value_t = 20, value_parser = value_parser!(u32).range(1..))]
     geode_threshold: u32,
 
     /// Minimum number of budding amethyst per loaded area
-    #[arg(short, long, default_value_t = 800)]
+    #[arg(short, long, default_value_t = 800, value_parser = value_parser!(u32).range(1..))]
     budding_threshold: u32,
 
     /// Random tickable radius
-    #[arg(long, default_value_t = 6)]
-    loaded_radius: u16,
+    #[arg(long, default_value_t = 6, value_parser = value_parser!(u8).range(3..=64))]
+    loaded_radius: u8,
 
     /// Search center chunk x
-    #[arg(long, allow_negative_numbers = true, default_value_t = 0, value_parser = parse_chunk_coord())]
+    #[arg(long, allow_negative_numbers = true, default_value_t = 0, value_parser = value_parser!(i64).range(WORLD_RANGE))]
     center_x: i64,
 
     /// Search center chunk z
-    #[arg(long, allow_negative_numbers = true, default_value_t = 0, value_parser = parse_chunk_coord())]
+    #[arg(long, allow_negative_numbers = true, default_value_t = 0, value_parser = value_parser!(i64).range(WORLD_RANGE))]
     center_z: i64,
 
     /// Where to save results
-    #[arg(long, default_value = "output.json", default_missing_value = None, num_args=0..=1, value_hint = FilePath)]
+    #[arg(long, default_value = "output.json", default_missing_value = None, num_args=0..=1, value_hint = ValueHint::FilePath)]
     output_path: Option<path::PathBuf>,
 
     /// Estimate number of clusters without running search
@@ -111,7 +103,7 @@ impl fmt::Display for Cluster {
     }
 }
 
-fn main() -> std::io::Result<()> {
+fn main() -> io::Result<()> {
     let args = Args::parse();
     if args.estimate {
         versioned!(args.minecraft_version, estimate, &args);
@@ -145,51 +137,55 @@ fn estimate<V: Version>(args: &Args) {
 }
 
 fn search_geodes<V: Version>(args: &Args) -> Vec<Cluster> {
-    let search_diameter = args.search_radius as usize * 2 + 1;
+    let search_radius: usize = args.search_radius.try_into().unwrap();
+    let search_diameter = search_radius * 2 + 1;
+
     let loaded_radius = i64::from(args.loaded_radius);
     let loaded_diameter = usize::from(args.loaded_radius) * 2 + 1;
 
     let start_x = args.center_x - i64::from(args.search_radius);
+    let end_x = start_x + search_diameter as i64;
+
     let start_z = args.center_z - i64::from(args.search_radius);
+    let end_z = start_z + search_diameter as i64;
 
     let mut geode = Geode::<V>::new(args.seed);
-    let mut history: Vec<u8> = vec![0; search_diameter * loaded_diameter];
-    let mut column_sum: Vec<u32> = vec![0; search_diameter];
-    let mut clusters: Vec<Cluster> = vec![];
+    let mut clusters: Vec<Cluster> = Vec::with_capacity(4096);
+
+    let mut chunk_history: Vec<u8> = vec![0; search_diameter * loaded_diameter];
+    let mut column_history: Vec<u32> = vec![0; search_diameter];
 
     let progress_bar = if cfg!(test) {
         ProgressBar::hidden()
     } else {
-        ProgressBar::new(search_diameter as u64).with_style(
-            ProgressStyle::with_template(
-                "[{bar}] {msg} potential clusters found ({eta_precise} left)",
+        ProgressBar::new(search_diameter as u64)
+            .with_style(
+                ProgressStyle::with_template(
+                    "[{bar}] {msg} potential clusters found ({eta_precise} left)",
+                )
+                .unwrap(),
             )
-            .unwrap(),
-        )
+            .with_message("0")
     };
-    progress_bar.set_message(clusters.len().to_string());
 
-    for idz in progress_bar.wrap_iter(0..search_diameter) {
-        let z = start_z + idz as i64;
-
+    let mut chunk_history_index = 0;
+    let chunk_history_reset = chunk_history.len();
+    for z in progress_bar.wrap_iter(start_z..end_z) {
         let mut geode_count = 0;
-        let slice: usize = (idz % loaded_diameter) * search_diameter;
-        let current: &mut [u8] = &mut history[slice..slice + search_diameter];
+        let chunk_history_slice =
+            &mut chunk_history[chunk_history_index..chunk_history_index + search_diameter];
 
-        for idx in 0..search_diameter {
-            let x = start_x + idx as i64;
-
-            let old_geode = &mut current[idx];
-            let column = &mut column_sum[idx];
+        for (idx, (x, old_geode)) in (start_x..end_x).zip(chunk_history_slice).enumerate() {
             let is_geode = u8::from(geode.check_fast(x, z));
+            let column = &mut column_history[idx];
 
             *column += u32::from(is_geode);
             *column -= u32::from(*old_geode);
             geode_count += *column;
             *old_geode = is_geode;
 
-            if let Some(old_column) = idx.checked_sub(loaded_diameter) {
-                geode_count -= column_sum[old_column];
+            if let Some(old_column_idx) = idx.checked_sub(loaded_diameter) {
+                geode_count -= column_history[old_column_idx];
                 if geode_count >= args.geode_threshold {
                     clusters.push(Cluster {
                         center_x: x - loaded_radius,
@@ -201,11 +197,15 @@ fn search_geodes<V: Version>(args: &Args) -> Vec<Cluster> {
             }
         }
 
+        chunk_history_index += search_diameter;
+        if chunk_history_index == chunk_history_reset {
+            chunk_history_index = 0;
+        }
+
         progress_bar.set_message(clusters.len().to_string());
     }
 
     progress_bar.finish();
-
     clusters
 }
 
@@ -213,7 +213,7 @@ fn save_results(path: &Option<&path::Path>, data: &[Cluster]) -> io::Result<()> 
     if let Some(path) = path {
         let file = fs::File::create(path)?;
         let writer = io::BufWriter::new(file);
-        to_writer_pretty(writer, data)?;
+        serde_json::to_writer_pretty(writer, data)?;
     }
     Ok(())
 }
