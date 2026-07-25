@@ -111,13 +111,15 @@ impl fmt::Display for Cluster {
     }
 }
 
-fn main() {
+fn main() -> std::io::Result<()> {
     let args = Args::parse();
     if args.estimate {
         versioned!(args.minecraft_version, estimate, &args);
     } else {
-        let _ = versioned!(args.minecraft_version, search_budding, &args);
+        versioned!(args.minecraft_version, search_budding, &args)?;
     }
+
+    Ok(())
 }
 
 fn estimate<V: Version>(args: &Args) {
