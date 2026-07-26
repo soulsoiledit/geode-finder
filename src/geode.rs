@@ -7,10 +7,13 @@ use crate::{
 pub struct Geode<V: Version> {
     seed: i64,
     x_scale: i64,
-    z_scale: i64,
+    pub z_scale: i64,
     random: V::RANDOM,
     noise: NormalNoise,
 }
+
+#[derive(Copy, Clone)]
+pub struct ScaledZ(pub i64);
 
 impl<V: Version> Geode<V> {
     // reversed from next_float
@@ -41,10 +44,12 @@ impl<V: Version> Geode<V> {
         self.random.next_float() < V::CHANCE
     }
 
-    pub fn check_fast(&mut self, chunk_x: i64, chunk_z: i64) -> bool {
-        self.set_feature_seed(chunk_x, chunk_z);
+    pub fn check_fast(&mut self, chunk_x: i64, scaled_z: ScaledZ) -> bool {
+        let scaled_x = chunk_x.wrapping_mul(self.x_scale);
+        let decoration_seed = scaled_x.wrapping_add(scaled_z.0) ^ self.seed;
+        let feature_seed = decoration_seed.wrapping_add(V::SALT);
         // uses derived int constant to avoid float division and <= for parity
-        self.random.next_bits(24) <= Self::CHANCE_INT
+        V::RANDOM::next_seed_bits(feature_seed, 24) <= Self::CHANCE_INT
     }
 
     pub fn generate(&mut self, chunk_x: i64, chunk_z: i64) -> u32 {
@@ -159,10 +164,11 @@ mod tests {
         let mut geode_count = 0;
         let mut fast_geode_count = 0;
         let mut budding_count = 0;
-        for cx in start..=end {
-            for cz in start..=end {
+        for cz in start..=end {
+            let scz = cz.wrapping_mul(geode.z_scale);
+            for cx in start..=end {
                 geode_count += geode.check(cx, cz) as u32;
-                fast_geode_count += u8::from(geode.check_fast(cx, cz));
+                fast_geode_count += u8::from(geode.check_fast(cx, ScaledZ(scz)));
                 budding_count += geode.generate(cx, cz);
             }
         }

@@ -17,7 +17,7 @@ pub fn poisson_tail(trials: f64, probability: f64, threshold: u32) -> f64 {
     (1.0 - cdf).max(0.0)
 }
 
-pub fn estimate<V: Version>(args: &Args) {
+pub fn estimate_clusters<V: Version>(args: &Args) {
     // Determined empirically
     const AVERAGE_BUDDING: f64 = 35.875;
 

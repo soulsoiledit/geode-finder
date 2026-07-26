@@ -5,16 +5,19 @@ mod noise;
 mod search;
 mod version;
 
+use std::{ops::RangeInclusive, path::PathBuf, thread};
+
+use anyhow::Result;
+use clap::{Parser, ValueEnum, ValueHint::FilePath, value_parser};
+
 use crate::{
-    estimate::estimate,
+    estimate::estimate_clusters,
     search::search_budding,
     version::{MC17, MC18, MC19},
 };
-use clap::{Parser, ValueEnum, ValueHint, value_parser};
-use std::{io, path};
 
 const WORLD_LIMIT: i64 = 30_000_000 / 16;
-const WORLD_RANGE: std::ops::RangeInclusive<i64> = -WORLD_LIMIT..=WORLD_LIMIT;
+const WORLD_RANGE: RangeInclusive<i64> = -WORLD_LIMIT..=WORLD_LIMIT;
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum VersionArgument {
@@ -29,6 +32,14 @@ pub enum VersionArgument {
     /// 1.19+
     #[clap(name = "1.19")]
     MC19,
+}
+
+fn thread_parser(threads_str: &str) -> Result<usize> {
+    let threads: usize = threads_str.parse()?;
+    if threads == 0 {
+        return Ok(thread::available_parallelism()?.get());
+    }
+    Ok(threads)
 }
 
 #[derive(Parser, Debug)]
@@ -54,6 +65,10 @@ struct Args {
     #[arg(short, long, default_value_t = 800, value_parser = value_parser!(u32).range(1..))]
     budding_threshold: u32,
 
+    /// Number of threads to use (0 will use all cores)
+    #[arg(long, default_value_t = 1, value_parser = thread_parser)]
+    threads: usize,
+
     /// Random tickable radius
     #[arg(long, default_value_t = 6, value_parser = value_parser!(u8).range(3..=64))]
     loaded_radius: u8,
@@ -67,22 +82,22 @@ struct Args {
     center_z: i64,
 
     /// Where to save results
-    #[arg(long, default_value = "output.json", default_missing_value = None, num_args=0..=1, value_hint = ValueHint::FilePath)]
-    output_path: Option<path::PathBuf>,
+    #[arg(long, default_value = "output.json", default_missing_value = None, num_args=0..=1, value_hint = FilePath)]
+    output_path: Option<PathBuf>,
 
     /// Estimate number of clusters without running search
     #[arg(long, default_value = "false", default_missing_value = "true")]
     estimate: bool,
 }
 
-fn main() -> io::Result<()> {
+fn main() -> Result<()> {
     let args = &Args::parse();
     let version = args.minecraft_version;
     if args.estimate {
         match version {
-            VersionArgument::MC17 => estimate::<MC17>(args),
-            VersionArgument::MC18 => estimate::<MC18>(args),
-            VersionArgument::MC19 => estimate::<MC19>(args),
+            VersionArgument::MC17 => estimate_clusters::<MC17>(args),
+            VersionArgument::MC18 => estimate_clusters::<MC18>(args),
+            VersionArgument::MC19 => estimate_clusters::<MC19>(args),
         };
     } else {
         match version {

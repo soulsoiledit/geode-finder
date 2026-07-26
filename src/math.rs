@@ -30,6 +30,8 @@ pub trait Random {
     fn new(seed: i64) -> Self;
     fn set_seed(&mut self, seed: i64);
     fn next_bits(&mut self, bits: u32) -> i32;
+    // skips progressing the seed
+    fn next_seed_bits(seed: i64, bits: u32) -> i32;
 
     fn next_int(&mut self, bound: i32) -> i32 {
         if bound.cast_unsigned().is_power_of_two() {
@@ -122,6 +124,20 @@ impl Random for Xoroshiro128PlusPlusRandom {
         let result = lo.wrapping_add(hi).rotate_left(17).wrapping_add(lo);
         result.cast_unsigned().wrapping_shr(64 - bits) as i32
     }
+
+    fn next_seed_bits(seed: i64, bits: u32) -> i32 {
+        let mut seed_lo = seed ^ Self::SILVER_RATIO;
+        let mut seed_hi = seed_lo.wrapping_add(Self::GOLDEN_RATIO);
+
+        seed_lo = Self::mix_stafford_13(seed_lo);
+        seed_hi = Self::mix_stafford_13(seed_hi);
+
+        let result = seed_lo
+            .wrapping_add(seed_hi)
+            .rotate_left(17)
+            .wrapping_add(seed_lo);
+        result.cast_unsigned().wrapping_shr(64 - bits) as i32
+    }
 }
 
 // LegacyRandomSource (LCG)
@@ -157,6 +173,12 @@ impl Random for JavaRandom {
     fn next_bits(&mut self, bits: u32) -> i32 {
         self.seed = (self.seed.wrapping_mul(Self::MULTIPLIER) + Self::INCREMENT) & Self::MODULUS;
         self.seed.wrapping_shr(Self::MOD_BITS - bits) as i32
+    }
+
+    fn next_seed_bits(seed: i64, bits: u32) -> i32 {
+        let mut seed = seed ^ Self::MULTIPLIER & Self::MODULUS;
+        seed = (seed.wrapping_mul(Self::MULTIPLIER) + Self::INCREMENT) & Self::MODULUS;
+        seed.wrapping_shr(Self::MOD_BITS - bits) as i32
     }
 }
 
@@ -222,6 +244,10 @@ mod tests {
                 skip: 156,
             }
         );
+        assert_eq!(
+            Xoroshiro128PlusPlusRandom::next_seed_bits(SEED, 32),
+            707568776
+        );
     }
 
     #[test]
@@ -239,6 +265,7 @@ mod tests {
                 skip: 200,
             }
         );
+        assert_eq!(JavaRandom::next_seed_bits(SEED, 32), -1155484576);
         assert_eq!(random.fork_from_hash().next_int(256), 2);
     }
 }
