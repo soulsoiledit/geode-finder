@@ -1,0 +1,197 @@
+use crate::{Args, geode::Geode, version::Version};
+use indicatif::{ProgressBar, ProgressStyle};
+use serde::Serialize;
+use std::{collections::HashMap, fmt, fs, io, path};
+
+#[derive(Debug, Serialize, PartialEq, PartialOrd, Eq, Ord)]
+pub struct Cluster {
+    geode_count: u32,
+    center_x: i64,
+    center_z: i64,
+}
+
+#[derive(Debug, Serialize, PartialEq, PartialOrd, Eq, Ord)]
+pub struct BuddingCluster {
+    budding_count: u32,
+    geode_count: u32,
+    center_x: i64,
+    center_z: i64,
+}
+
+impl fmt::Display for BuddingCluster {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            f,
+            "{} budding amethyst centered at ({}, {})",
+            self.budding_count, self.center_x, self.center_z,
+        )
+    }
+}
+
+fn search_geodes<V: Version>(args: &Args) -> Vec<Cluster> {
+    let search_radius: usize = args.search_radius.try_into().unwrap();
+    let search_diameter = search_radius * 2 + 1;
+
+    let loaded_radius = i64::from(args.loaded_radius);
+    let loaded_diameter = usize::from(args.loaded_radius) * 2 + 1;
+
+    let start_x = args.center_x - i64::from(args.search_radius);
+    let end_x = start_x + search_diameter as i64;
+
+    let start_z = args.center_z - i64::from(args.search_radius);
+    let end_z = start_z + search_diameter as i64;
+
+    let mut geode = Geode::<V>::new(args.seed);
+    let mut clusters: Vec<Cluster> = Vec::with_capacity(4096);
+
+    let mut chunk_history: Vec<u8> = vec![0; search_diameter * loaded_diameter];
+    let mut column_history: Vec<u32> = vec![0; search_diameter];
+
+    let progress_bar = if cfg!(test) {
+        ProgressBar::hidden()
+    } else {
+        ProgressBar::new(search_diameter as u64)
+            .with_style(
+                ProgressStyle::with_template(
+                    "[{bar}] {percent_precise}% ({eta_precise} left), {msg} potential clusters found ",
+                )
+                .unwrap(),
+            )
+            .with_message("0")
+    };
+
+    let mut chunk_history_index = 0;
+    let chunk_history_reset = chunk_history.len();
+    for z in progress_bar.wrap_iter(start_z..end_z) {
+        let mut geode_count = 0;
+        let chunk_history_slice =
+            &mut chunk_history[chunk_history_index..chunk_history_index + search_diameter];
+
+        for (idx, (x, old_geode)) in (start_x..end_x).zip(chunk_history_slice).enumerate() {
+            let is_geode = u8::from(geode.check_fast(x, z));
+            let column = &mut column_history[idx];
+
+            *column += u32::from(is_geode);
+            *column -= u32::from(*old_geode);
+            geode_count += *column;
+            *old_geode = is_geode;
+
+            if let Some(old_column_idx) = idx.checked_sub(loaded_diameter) {
+                geode_count -= column_history[old_column_idx];
+                if geode_count >= args.geode_threshold {
+                    clusters.push(Cluster {
+                        center_x: x - loaded_radius,
+                        center_z: z - loaded_radius,
+                        geode_count,
+                    });
+                }
+            }
+        }
+
+        chunk_history_index += search_diameter;
+        if chunk_history_index == chunk_history_reset {
+            chunk_history_index = 0;
+        }
+
+        progress_bar.set_message(clusters.len().to_string());
+    }
+
+    progress_bar.finish();
+    clusters
+}
+
+fn save_results(path: &Option<&path::Path>, data: &[BuddingCluster]) -> io::Result<()> {
+    if let Some(path) = path {
+        let file = fs::File::create(path)?;
+        let writer = io::BufWriter::new(file);
+        serde_json::to_writer_pretty(writer, data)?;
+    }
+    Ok(())
+}
+
+pub fn search_budding<V: Version>(args: &Args) -> std::io::Result<Vec<BuddingCluster>> {
+    let loaded_radius = i64::from(args.loaded_radius);
+    let path = &args.output_path.as_deref();
+
+    let mut geode = Geode::<V>::new(args.seed);
+    let geode_clusters = search_geodes::<V>(args);
+    let save_interval = (geode_clusters.len() / 10).max(1);
+
+    let mut cached_budding: HashMap<(i64, i64), u32> = HashMap::with_capacity(1000);
+    let mut budding_clusters: Vec<BuddingCluster> = Vec::with_capacity(100);
+
+    for (i, cluster) in geode_clusters.iter().enumerate() {
+        let center_x = cluster.center_x;
+        let center_y = cluster.center_z;
+
+        let min_x = center_x - loaded_radius;
+        let max_x = center_x + loaded_radius;
+        let min_z = center_y - loaded_radius;
+        let max_z = center_y + loaded_radius;
+
+        let mut budding_count = 0;
+        for x in min_x..=max_x {
+            for z in min_z..=max_z {
+                budding_count += *cached_budding
+                    .entry((x, z))
+                    .or_insert_with(|| geode.generate(x, z));
+            }
+        }
+
+        if budding_count >= args.budding_threshold {
+            let center_x_blocks = center_x * 16;
+            let center_z_blocks = center_y * 16;
+            let cluster = BuddingCluster {
+                center_x: center_x_blocks,
+                center_z: center_z_blocks,
+                geode_count: cluster.geode_count,
+                budding_count,
+            };
+            eprintln!("{}", cluster);
+            budding_clusters.push(cluster)
+        }
+
+        if i > 0 && i % save_interval == 0 {
+            save_results(path, &budding_clusters)?;
+        }
+    }
+
+    save_results(path, &budding_clusters)?;
+    Ok(budding_clusters)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::{VersionArgument, version::MC19};
+
+    fn test_args() -> Args {
+        Args {
+            minecraft_version: VersionArgument::MC19,
+            seed: 0,
+            search_radius: 1000,
+            geode_threshold: 20,
+            budding_threshold: 800,
+            output_path: None,
+            loaded_radius: 6,
+            center_x: 0,
+            center_z: 0,
+            estimate: false,
+        }
+    }
+
+    #[test]
+    fn test_search_geodes() {
+        let clusters = search_geodes::<MC19>(&test_args());
+        assert_eq!(clusters.len(), 189);
+        assert_eq!(clusters.iter().max().unwrap().geode_count, 23);
+    }
+
+    #[test]
+    fn test_search_budding() {
+        if let Ok(clusters) = search_budding::<MC19>(&test_args()) {
+            assert_eq!(clusters.len(), 40);
+            assert_eq!(clusters.iter().max().unwrap().budding_count, 911);
+        }
+    }
+}
