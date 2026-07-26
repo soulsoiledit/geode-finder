@@ -1,16 +1,17 @@
+mod estimate;
 mod geode;
 mod math;
 mod noise;
 mod version;
 
 use crate::{
+    estimate::estimate,
     geode::Geode,
     version::{MC17, MC18, MC19, Version},
 };
 use clap::{Parser, ValueEnum, ValueHint, value_parser};
 use indicatif::{ProgressBar, ProgressStyle};
 use serde::Serialize;
-use statrs::distribution::{Binomial, DiscreteCDF};
 use std::{collections::HashMap, fmt, fs, io, path};
 
 const WORLD_LIMIT: i64 = 30_000_000 / 16;
@@ -114,28 +115,7 @@ fn main() -> io::Result<()> {
     Ok(())
 }
 
-fn estimate<V: Version>(args: &Args) {
-    // Determined empirically
-    const AVERAGE_BUDDING: f64 = 35.875;
-
-    let loaded_area = (u64::from(args.loaded_radius) * 2 + 1).pow(2);
-    let total_search_area = (f64::from(args.search_radius) * 2.0 + 1.0).powi(2);
-
-    let binomial = Binomial::new(f64::from(V::CHANCE), loaded_area).unwrap();
-
-    let geode_cluster_chance = 1.0 - binomial.cdf(u64::from(args.geode_threshold) - 1);
-    let expected_geode_clusters = (total_search_area * geode_cluster_chance).floor();
-
-    let required_geodes = (f64::from(args.budding_threshold) / AVERAGE_BUDDING).floor() as u64;
-    let budding_cluster_chance = 1.0 - binomial.cdf(required_geodes - 1);
-    let expected_budding_clusters = (total_search_area * budding_cluster_chance)
-        .min(expected_geode_clusters)
-        .floor();
-
-    println!("Estimated geode clusters: {expected_geode_clusters}");
-    println!("Estimated budding amethyst clusters: {expected_budding_clusters}");
-}
-
+#[inline(never)]
 fn search_geodes<V: Version>(args: &Args) -> Vec<Cluster> {
     let search_radius: usize = args.search_radius.try_into().unwrap();
     let search_diameter = search_radius * 2 + 1;
