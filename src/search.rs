@@ -77,7 +77,9 @@ fn search_geodes_tile<V: Version>(
 
     let tile_width = usize::try_from((end_x - start_x).abs()).unwrap();
     let mut chunk_history: Vec<u8> = vec![0; tile_width * loaded_diameter];
-    let mut column_history: Vec<u32> = vec![0; tile_width];
+    // Add loaded_diameter to accomodate buffer zone
+    // and index without branch later
+    let mut column_history: Vec<u32> = vec![0; tile_width + loaded_diameter];
 
     let mut chunk_history_index = 0;
     let chunk_history_reset = chunk_history.len();
@@ -90,28 +92,29 @@ fn search_geodes_tile<V: Version>(
         let chunk_history_slice =
             &mut chunk_history[chunk_history_index..chunk_history_index + tile_width];
 
-        for (idx, x) in (start_x..end_x).enumerate() {
+        for (idx, idx_ld, x) in (start_x..end_x)
+            .enumerate()
+            .map(|(idx, x)| (idx, idx + loaded_diameter, x))
+        {
             let is_geode = u8::from(geode.check_fast(x, scaled_z));
 
             let old_geode = chunk_history_slice[idx];
             chunk_history_slice[idx] = is_geode;
 
-            let new_column = column_history[idx] + u32::from(is_geode) - u32::from(old_geode);
-            column_history[idx] = new_column;
-            geode_count += new_column;
+            let new_column = column_history[idx_ld] + u32::from(is_geode) - u32::from(old_geode);
+            column_history[idx_ld] = new_column;
 
-            if let Some(old_column_idx) = idx.checked_sub(loaded_diameter) {
-                geode_count -= column_history[old_column_idx];
-                if geode_count >= shared.geode_threshold {
-                    clusters.push(GeodeCluster {
-                        center_x: x - loaded_radius,
-                        center_z,
-                        geode_count,
-                    });
-                    shared
-                        .total_clusters
-                        .fetch_add(1, atomic::Ordering::Relaxed);
-                }
+            geode_count += new_column;
+            geode_count -= column_history[idx];
+            if geode_count >= shared.geode_threshold {
+                clusters.push(GeodeCluster {
+                    center_x: x - loaded_radius,
+                    center_z,
+                    geode_count,
+                });
+                shared
+                    .total_clusters
+                    .fetch_add(1, atomic::Ordering::Relaxed);
             }
         }
 
