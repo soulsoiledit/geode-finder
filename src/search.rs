@@ -86,6 +86,7 @@ fn search_geodes_tile<V: Version>(
         let scaled_z = ScaledZ(z.wrapping_mul(geode.z_scale));
 
         let mut geode_count = 0;
+        // Slice here to keep current row in cache
         let chunk_history_slice =
             &mut chunk_history[chunk_history_index..chunk_history_index + tile_width];
 
@@ -156,20 +157,22 @@ fn search_geodes<V: Version>(args: &crate::Args, pool: &ThreadPool) -> Result<Ve
             .with_message("0")
     };
 
+    // Run UI on a different thread
     let handle = {
-        let progress_position_ui = progress_position.clone();
-        let total_clusters_ui = total_clusters.clone();
-        let progress_bar_ui = progress_bar.clone();
+        let progress_position = progress_position.clone();
+        let total_clusters = total_clusters.clone();
+        let progress_bar = progress_bar.clone();
 
         thread::spawn(move || {
-            while !progress_bar_ui.is_finished() {
-                progress_bar_ui.set_position(progress_position_ui.load(atomic::Ordering::Relaxed));
-                progress_bar_ui.set_message(
-                    total_clusters_ui
-                        .load(atomic::Ordering::Relaxed)
-                        .to_string(),
-                );
+            loop {
+                progress_bar.set_position(progress_position.load(atomic::Ordering::Relaxed));
+                progress_bar
+                    .set_message(total_clusters.load(atomic::Ordering::Relaxed).to_string());
                 thread::sleep(time::Duration::from_millis(100));
+
+                if progress_bar.is_finished() {
+                    break;
+                }
             }
         })
     };

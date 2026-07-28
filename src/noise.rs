@@ -1,4 +1,4 @@
-use std::array::from_fn;
+use std::array;
 
 use crate::math::{JavaRandom, Random};
 
@@ -39,7 +39,7 @@ impl ImprovedNoise {
         let y_offset = random.next_double() * 256.0;
         let z_offset = random.next_double() * 256.0;
 
-        let mut permutation: [i8; 256] = from_fn(|i| i as i8);
+        let mut permutation: [i8; 256] = array::from_fn(|i| i as i8);
         for i in 0..256 {
             let remaining = 256 - i;
             let offset = random.next_int(remaining as i32).cast_unsigned() as usize;

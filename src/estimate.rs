@@ -1,6 +1,7 @@
 use crate::{Args, version::Version};
 
-pub fn poisson_tail(trials: f64, probability: f64, threshold: u32) -> f64 {
+// Poisson provides a close enough approximation (n >= 49 > 20, p = 1/24 or 1/53 >= 0.05)
+fn poisson_tail(trials: f64, probability: f64, threshold: u32) -> f64 {
     if threshold == 0 {
         return 1.0;
     }

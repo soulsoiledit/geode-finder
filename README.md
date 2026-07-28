@@ -41,6 +41,7 @@ This programs helps find high density clusters of geodes and budding amethyst in
     | `-r`, `--search-radius`     | Radius of chunks to search over                            | 1000        |
     | `-g`, `--geode-threshold`   | Minimum number of geodes in a cluster                      | 20          |
     | `-b`, `--budding-threshold` | Minimum number of budding amethyst in a cluster            | 800         |
+    | `--threads`                 | Number of threads to use (0 will use all cores)            | 1           |
     | `--loaded-radius`           | Random tickable radius                                     | 6           |
     | `--center-x`                | x coordinate of the center chunk                           | 0           |
     | `--center-z`                | z coordinate of the center chunk                           | 0           |
@@ -49,7 +50,7 @@ This programs helps find high density clusters of geodes and budding amethyst in
 
 1. Run the program with your selected options.
 
-    Example: `./geode-finder.exe -r 10000 -g 22 -b 850` will search a 10000 chunk radius around (0, 0) to find 13x13 (`--loaded-radius` \* 2 + 1) clusters that have at least 22 geodes at 850 budding amethyst.
+    Example: `./geode-finder.exe -r 10000 -g 22 -b 850 --threads 0` will search a 10000 chunk radius around (0, 0) to find 13x13 (`--loaded-radius` \* 2 + 1) clusters that have at least 22 geodes at 850 budding amethyst using all available threads on your machine.
 
 1. The program will find all valid geode clusters at the beginning, then check if each cluster will meet the budding amethyst threshold. It will print the clusters out and save them to file selected by `--output-path`.
 

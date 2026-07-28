@@ -31,23 +31,21 @@ impl<V: Version> Geode<V> {
         }
     }
 
-    fn set_feature_seed(&mut self, chunk_x: i64, chunk_z: i64) {
+    fn get_feature_seed(&self, chunk_x: i64, scaled_z: ScaledZ) -> i64 {
         let scaled_x = chunk_x.wrapping_mul(self.x_scale);
-        let scaled_z = chunk_z.wrapping_mul(self.z_scale);
-        let decoration_seed = scaled_x.wrapping_add(scaled_z) ^ self.seed;
-        let feature_seed = decoration_seed.wrapping_add(V::SALT);
-        self.random.set_seed(feature_seed);
+        let decoration_seed = scaled_x.wrapping_add(scaled_z.0) ^ self.seed;
+        decoration_seed.wrapping_add(V::SALT)
     }
 
     pub fn check(&mut self, chunk_x: i64, chunk_z: i64) -> bool {
-        self.set_feature_seed(chunk_x, chunk_z);
+        let scaled_z = ScaledZ(chunk_z.wrapping_mul(self.z_scale));
+        let feature_seed = self.get_feature_seed(chunk_x, scaled_z);
+        self.random.set_seed(feature_seed);
         self.random.next_float() < V::CHANCE
     }
 
     pub fn check_fast(&mut self, chunk_x: i64, scaled_z: ScaledZ) -> bool {
-        let scaled_x = chunk_x.wrapping_mul(self.x_scale);
-        let decoration_seed = scaled_x.wrapping_add(scaled_z.0) ^ self.seed;
-        let feature_seed = decoration_seed.wrapping_add(V::SALT);
+        let feature_seed = self.get_feature_seed(chunk_x, scaled_z);
         // uses derived int constant to avoid float division and <= for parity
         V::RANDOM::next_seed_bits(feature_seed, 24) <= Self::CHANCE_INT
     }
@@ -79,13 +77,14 @@ impl<V: Version> Geode<V> {
         );
         let should_generate_crack = f64::from(self.random.next_float()) < V::CRACK_CHANCE;
 
-        let mut points = Vec::with_capacity(num_points as usize);
-        for _ in 0..num_points {
-            let mut next_coord = || V::RADIUS.sample(&mut self.random);
-            let point = origin.add(next_coord(), next_coord(), next_coord());
-            let offset = f64::from(V::POINT_OFFSET.sample(&mut self.random));
-            points.push((point, offset));
-        }
+        let points: Vec<(Block, f64)> = (0..num_points)
+            .map(|_| {
+                let mut next_coord = || V::RADIUS.sample(&mut self.random);
+                let point = origin.add(next_coord(), next_coord(), next_coord());
+                let offset = f64::from(V::POINT_OFFSET.sample(&mut self.random));
+                (point, offset)
+            })
+            .collect();
 
         let crack_points = should_generate_crack.then(|| {
             let crack = num_points * 2 + 1;
@@ -167,13 +166,13 @@ mod tests {
         for cz in start..=end {
             let scz = cz.wrapping_mul(geode.z_scale);
             for cx in start..=end {
-                geode_count += geode.check(cx, cz) as u32;
-                fast_geode_count += u8::from(geode.check_fast(cx, ScaledZ(scz)));
+                geode_count += u32::from(geode.check(cx, cz));
+                fast_geode_count += u32::from(geode.check_fast(cx, ScaledZ(scz)));
                 budding_count += geode.generate(cx, cz);
             }
         }
 
-        assert!(geode_count == u32::from(fast_geode_count));
+        assert!(geode_count == fast_geode_count);
         TestGeodeResult {
             geode_count,
             budding_count,
