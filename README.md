@@ -54,7 +54,7 @@ This programs helps find high density clusters of geodes and budding amethyst in
 
 1. The program will find all valid geode clusters at the beginning, then check if each cluster will meet the budding amethyst threshold. It will print the clusters out and save them to file selected by `--output-path`.
 
-1. If you have Carpet mod installed, I've included a helper script to facilitate world pregeneration. Copy the printed list of valid geode locations to `[world]/scripts/shared/geodes.txt` and place `geodegen.sc` inside the `[worldname]/scripts` directory. Load the script and begin the search with `./geodegen`. This script currently does not work with the `--output-path` file.
+1. If you have Carpet mod installed, I've included a helper script to facilitate world pregeneration. Copy your output file to `[world]/scripts/shared/output.json` and place `geodegen.sc` inside the `[worldname]/scripts` directory. Load the script and begin the search with `./geodegen`.
 
 ## Credits
 
