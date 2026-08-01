@@ -3,26 +3,29 @@
 
 package geode;
 
+import it.unimi.dsi.fastutil.doubles.DoubleList;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
-import net.minecraft.data.worldgen.Features;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Mth;
 import net.minecraft.world.level.WorldGenLevel;
-import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.level.biome.BiomeSource.StepFeatureData;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
+import net.minecraft.world.level.levelgen.LegacyRandomSource;
+import net.minecraft.world.level.levelgen.RandomSource;
 import net.minecraft.world.level.levelgen.WorldgenRandom;
+import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
 import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
+import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 import net.minecraft.world.level.levelgen.synth.PerlinNoise;
 import org.slf4j.Logger;
@@ -61,7 +64,7 @@ public class Geode implements ModInitializer {
 
   private static void testRandom() {
     LOGGER.info("Random:");
-    WorldgenRandom random = new WorldgenRandom(SEED);
+    WorldgenRandom random = new WorldgenRandom(new LegacyRandomSource(SEED));
     LOGGER.info("  nextInt power-of-2: {}", random.nextInt(256));
     LOGGER.info("  nextInt non power-of-2: {}", random.nextInt(192));
     LOGGER.info("  nextBetween: {}", Mth.randomBetweenInclusive(random, 192, 256));
@@ -70,8 +73,27 @@ public class Geode implements ModInitializer {
     LOGGER.info("  nextDouble: {}", (random.nextDouble()));
     random.consumeCount(256);
     LOGGER.info("  skip: {}", random.nextInt(256));
+  }
 
-    random = new WorldgenRandom(SEED);
+  private static void testJavaRandom() {
+    LOGGER.info("Java Random:");
+    WorldgenRandom random = new WorldgenRandom(new LegacyRandomSource(SEED));
+
+    int bits = 0;
+    for (int i = 0; i < 256; i++) {
+      bits = random.next(32);
+    }
+    LOGGER.info("  random progression: {}", bits);
+
+    random.setSeed(SEED);
+    RandomSource forkedRandom = random.forkPositional().fromHashOf("octave_-4");
+    LOGGER.info("  fork: {}", forkedRandom.nextLong());
+  }
+
+  private static void testXoroshiro128Random() {
+    LOGGER.info("Xoroshiro128++:");
+    WorldgenRandom random = new WorldgenRandom(new XoroshiroRandomSource(SEED));
+
     int bits = 0;
     for (int i = 0; i < 256; i++) {
       bits = random.next(32);
@@ -80,7 +102,9 @@ public class Geode implements ModInitializer {
   }
 
   private static void testPerlinNoise() {
-    PerlinNoise perlin = PerlinNoise.create(new WorldgenRandom(SEED), 0, 1.0);
+    PerlinNoise perlin =
+        PerlinNoise.createLegacyForLegacyNormalNoise(
+            new WorldgenRandom(new LegacyRandomSource(SEED)), 0, DoubleList.of(1.0));
     LOGGER.info("Perlin Noise:");
     LOGGER.info("  0: {}", perlin.getValue(0.0, 0.0, 0.0));
     LOGGER.info("  -half: {}", perlin.getValue(-0.5, -0.5, -0.5));
@@ -96,7 +120,8 @@ public class Geode implements ModInitializer {
     double input_factor = 1.0181268882175227;
     double scale = 1.0 / (frequency * input_factor);
 
-    NormalNoise noise = NormalNoise.create(new WorldgenRandom(SEED), octave, amplitude);
+    NormalNoise noise =
+        NormalNoise.create(new WorldgenRandom(new LegacyRandomSource(SEED)), octave, amplitude);
     LOGGER.info("Normal Noise:");
     LOGGER.info("  0: {}", noise.getValue(0.0, 0.0, 0.0));
     LOGGER.info("  -1: {}", noise.getValue(-scale, -scale, -scale));
@@ -115,20 +140,22 @@ public class Geode implements ModInitializer {
   }
 
   private static int[] getSalt(MinecraftServer server) {
-    Biome plains = lookup(server, "worldgen/biome", "plains");
-    List<List<Supplier<ConfiguredFeature<?, ?>>>> featuresByStep =
-        plains.getGenerationSettings().features();
+    List<StepFeatureData> featuresByStep =
+        server.getWorldData().worldGenSettings().overworld().getBiomeSource().featuresPerStep();
     Registry<ConfiguredFeature<?, ?>> featureRegistry =
         lookupRegistry(server, "worldgen/configured_feature");
-    ResourceLocation geodeKey = new ResourceLocation("amethyst_geode");
+    ResourceLocation geodeKey = ResourceLocation.tryParse("amethyst_geode");
 
     int[] salt = new int[2];
-    for (List<Supplier<ConfiguredFeature<?, ?>>> genStep : featuresByStep) {
+    for (StepFeatureData genStep : featuresByStep) {
       salt[1] = 0;
-      for (Supplier<ConfiguredFeature<?, ?>> feature : genStep) {
-        if (featureRegistry.getKey(feature.get()).equals(geodeKey)) {
-          LOGGER.info("  salt: {}", 10000 * salt[0] + salt[1]);
-          return salt;
+      for (PlacedFeature placedFeature : genStep.features()) {
+        for (ConfiguredFeature<?, ?> configuredFeature :
+            (Iterable<ConfiguredFeature<?, ?>>) placedFeature.getFeatures()::iterator) {
+          if (featureRegistry.getKey(configuredFeature).equals(geodeKey)) {
+            LOGGER.info("  salt: {}", 10000 * salt[0] + salt[1]);
+            return salt;
+          }
         }
         salt[1]++;
       }
@@ -141,9 +168,9 @@ public class Geode implements ModInitializer {
   private static void testGeode(MinecraftServer server) {
     LOGGER.info("Geode:");
     WorldGenLevel world = fakeWorld(server);
-    WorldgenRandom random = new WorldgenRandom(SEED);
+    WorldgenRandom random = new WorldgenRandom(new XoroshiroRandomSource(SEED));
     ChunkGenerator generator = server.getWorldData().worldGenSettings().overworld();
-    ConfiguredFeature<?, ?> geode = Features.AMETHYST_GEODE;
+    PlacedFeature geode = lookup(server, "worldgen/placed_feature", "amethyst_geode");
 
     int[] salt = getSalt(server);
     int range = 32;
@@ -152,7 +179,7 @@ public class Geode implements ModInitializer {
         BlockPos blockPos = new BlockPos(x * 16, 0, z * 16);
         long l = random.setDecorationSeed(SEED, blockPos.getX(), blockPos.getZ());
         random.setFeatureSeed(l, salt[1], salt[0]);
-        if (geode.place(world, generator, random, blockPos)) {
+        if (geode.placeWithBiomeCheck(world, generator, random, blockPos)) {
           GEODE_COUNT.incrementAndGet();
         }
       }
@@ -168,6 +195,8 @@ public class Geode implements ModInitializer {
         server -> {
           LOGGER.info("=== Testing for geode-finder:");
           testRandom();
+          testJavaRandom();
+          testXoroshiro128Random();
           testPerlinNoise();
           testNormalNoise();
           testGeode(server);
