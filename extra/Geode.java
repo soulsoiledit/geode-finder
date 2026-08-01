@@ -4,9 +4,11 @@
 package geode;
 
 import it.unimi.dsi.fastutil.doubles.DoubleList;
+import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.core.BlockPos;
@@ -15,13 +17,13 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Mth;
+import net.minecraft.util.RandomSource;
 import net.minecraft.world.level.WorldGenLevel;
-import net.minecraft.world.level.biome.BiomeSource.StepFeatureData;
+import net.minecraft.world.level.biome.FeatureSorter.StepFeatureData;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
 import net.minecraft.world.level.levelgen.LegacyRandomSource;
-import net.minecraft.world.level.levelgen.RandomSource;
 import net.minecraft.world.level.levelgen.WorldgenRandom;
 import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
@@ -139,12 +141,21 @@ public class Geode implements ModInitializer {
   }
 
   private static int[] getSalt(MinecraftServer server) {
-    List<StepFeatureData> featuresByStep =
-        server.getWorldData().worldGenSettings().overworld().getBiomeSource().featuresPerStep();
+    ChunkGenerator generator = server.overworld().getChunkSource().getGenerator();
+
+    Supplier<List<StepFeatureData>> featuresPerStep;
+    try {
+      Field featuresPerStepField = ChunkGenerator.class.getDeclaredField("featuresPerStep");
+      featuresPerStepField.setAccessible(true);
+      featuresPerStep = (Supplier<List<StepFeatureData>>) featuresPerStepField.get(generator);
+    } catch (Exception e) {
+      e.printStackTrace();
+      return new int[] {-1, -1};
+    }
     ResourceLocation geodeKey = ResourceLocation.tryParse("amethyst_geode");
 
     int[] salt = new int[2];
-    for (StepFeatureData genStep : featuresByStep) {
+    for (StepFeatureData genStep : featuresPerStep.get()) {
       salt[1] = 0;
       for (PlacedFeature placedFeature : genStep.features()) {
         if (placedFeature.feature().is(geodeKey)) {
@@ -163,7 +174,7 @@ public class Geode implements ModInitializer {
     LOGGER.info("Geode:");
     WorldGenLevel world = fakeWorld(server);
     WorldgenRandom random = new WorldgenRandom(new XoroshiroRandomSource(SEED));
-    ChunkGenerator generator = server.getWorldData().worldGenSettings().overworld();
+    ChunkGenerator generator = server.overworld().getChunkSource().getGenerator();
     PlacedFeature geode = lookup(server, "worldgen/placed_feature", "amethyst_geode");
 
     int[] salt = getSalt(server);
