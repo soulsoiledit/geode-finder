@@ -13,8 +13,8 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Registry;
+import net.minecraft.resources.Identifier;
 import net.minecraft.resources.ResourceKey;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Mth;
 import net.minecraft.util.RandomSource;
@@ -131,13 +131,13 @@ public class Geode implements ModInitializer {
 
   private static <T> Registry<T> lookupRegistry(MinecraftServer server, String registryName) {
     ResourceKey<Registry<T>> registryKey =
-        ResourceKey.createRegistryKey(new ResourceLocation(registryName));
-    return server.registryAccess().registryOrThrow(registryKey);
+        ResourceKey.createRegistryKey(Identifier.parse(registryName));
+    return server.registryAccess().lookupOrThrow(registryKey);
   }
 
   private static <T> T lookup(MinecraftServer server, String registryName, String resourceName) {
     Registry<T> registry = lookupRegistry(server, registryName);
-    return registry.get(new ResourceLocation(resourceName));
+    return registry.getValue(Identifier.parse(resourceName));
   }
 
   private static int[] getSalt(MinecraftServer server) {
@@ -152,7 +152,7 @@ public class Geode implements ModInitializer {
       e.printStackTrace();
       return new int[] {-1, -1};
     }
-    ResourceLocation geodeKey = ResourceLocation.tryParse("amethyst_geode");
+    Identifier geodeKey = Identifier.tryParse("amethyst_geode");
 
     int[] salt = new int[2];
     for (StepFeatureData genStep : featuresPerStep.get()) {
