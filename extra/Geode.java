@@ -24,7 +24,6 @@ import net.minecraft.world.level.levelgen.LegacyRandomSource;
 import net.minecraft.world.level.levelgen.RandomSource;
 import net.minecraft.world.level.levelgen.WorldgenRandom;
 import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
-import net.minecraft.world.level.levelgen.feature.ConfiguredFeature;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 import net.minecraft.world.level.levelgen.synth.PerlinNoise;
@@ -103,7 +102,7 @@ public class Geode implements ModInitializer {
 
   private static void testPerlinNoise() {
     PerlinNoise perlin =
-        PerlinNoise.createLegacyForLegacyNormalNoise(
+        PerlinNoise.createLegacyForLegacyNetherBiome(
             new WorldgenRandom(new LegacyRandomSource(SEED)), 0, DoubleList.of(1.0));
     LOGGER.info("Perlin Noise:");
     LOGGER.info("  0: {}", perlin.getValue(0.0, 0.0, 0.0));
@@ -142,20 +141,15 @@ public class Geode implements ModInitializer {
   private static int[] getSalt(MinecraftServer server) {
     List<StepFeatureData> featuresByStep =
         server.getWorldData().worldGenSettings().overworld().getBiomeSource().featuresPerStep();
-    Registry<ConfiguredFeature<?, ?>> featureRegistry =
-        lookupRegistry(server, "worldgen/configured_feature");
     ResourceLocation geodeKey = ResourceLocation.tryParse("amethyst_geode");
 
     int[] salt = new int[2];
     for (StepFeatureData genStep : featuresByStep) {
       salt[1] = 0;
       for (PlacedFeature placedFeature : genStep.features()) {
-        for (ConfiguredFeature<?, ?> configuredFeature :
-            (Iterable<ConfiguredFeature<?, ?>>) placedFeature.getFeatures()::iterator) {
-          if (featureRegistry.getKey(configuredFeature).equals(geodeKey)) {
-            LOGGER.info("  salt: {}", 10000 * salt[0] + salt[1]);
-            return salt;
-          }
+        if (placedFeature.feature().is(geodeKey)) {
+          LOGGER.info("  salt: {}", 10000 * salt[0] + salt[1]);
+          return salt;
         }
         salt[1]++;
       }
