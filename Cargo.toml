@@ -1,6 +1,6 @@
 [package]
 name = "geode-finder"
-version = "2.1.0"
+version = "2.1.1"
 edition = "2024"
 description = "Tool to search for geodes and budding amethyst clusters in a Minecraft world"
 repository = "https://github.com/soulsoiledit/geode-finder"

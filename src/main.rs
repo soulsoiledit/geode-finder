@@ -16,8 +16,8 @@ use crate::{
     version::{MC17, MC18, MC19},
 };
 
-const WORLD_LIMIT: i64 = 30_000_000 / 16;
-const WORLD_RANGE: RangeInclusive<i64> = -WORLD_LIMIT..=WORLD_LIMIT;
+const WORLD_BORDER: i64 = 30_000_000 / 16;
+const BORDER_RANGE: RangeInclusive<i64> = -WORLD_BORDER..=WORLD_BORDER;
 
 #[derive(Debug, Copy, Clone, ValueEnum)]
 pub enum VersionArgument {
@@ -54,7 +54,7 @@ struct Args {
     seed: i64,
 
     /// Search radius
-    #[arg(short = 'r', long, default_value_t = 1000, value_parser = value_parser!(u32).range(1..=WORLD_LIMIT))]
+    #[arg(short = 'r', long, default_value_t = 1000, value_parser = value_parser!(u32).range(1..=WORLD_BORDER))]
     search_radius: u32,
 
     /// Minimum number of geodes per loaded area
@@ -74,11 +74,11 @@ struct Args {
     loaded_radius: u8,
 
     /// Search center chunk x
-    #[arg(long, allow_negative_numbers = true, default_value_t = 0, value_parser = value_parser!(i64).range(WORLD_RANGE))]
+    #[arg(long, allow_negative_numbers = true, default_value_t = 0, value_parser = value_parser!(i64).range(BORDER_RANGE))]
     center_x: i64,
 
     /// Search center chunk z
-    #[arg(long, allow_negative_numbers = true, default_value_t = 0, value_parser = value_parser!(i64).range(WORLD_RANGE))]
+    #[arg(long, allow_negative_numbers = true, default_value_t = 0, value_parser = value_parser!(i64).range(BORDER_RANGE))]
     center_z: i64,
 
     /// Where to save results
