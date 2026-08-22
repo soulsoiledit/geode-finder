@@ -1,6 +1,7 @@
 use crate::{Args, WORLD_BORDER, version::Version};
 
-// Poisson provides a close enough approximation (n >= 49 > 20, p = 1/24 or 1/53 >= 0.05)
+/// P(X >= threshold)
+// Poisson provides a close enough approximation (n >= 49 > 20, p = 1/24 or 1/53 <= 0.05)
 fn poisson_tail(trials: f64, probability: f64, threshold: u32) -> f64 {
     if threshold == 0 {
         return 1.0;
@@ -22,7 +23,7 @@ pub fn estimate_clusters<V: Version>(args: &Args) {
     // Determined empirically
     const AVERAGE_BUDDING: f64 = 35.875;
 
-    let loaded_area = (f64::from(args.loaded_radius) * 2.0 + 1.0).powi(2);
+    let loaded_area = f64::from(args.loaded_radius).mul_add(2.0, 1.0).powi(2);
     let search_area = {
         let start_x = (args.center_x - i64::from(args.search_radius)).max(-WORLD_BORDER);
         let start_z = (args.center_z - i64::from(args.search_radius)).max(-WORLD_BORDER);
