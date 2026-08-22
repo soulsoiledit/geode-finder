@@ -36,7 +36,7 @@ This programs helps find high density clusters of geodes and budding amethyst in
     | --------------------------- | ---------------------------------------------------------- | ----------- |
     | `-h`, `--help`              | Shows the list of options                                  |
     | `-V`, `--version`           | Prints the version of the program                          |
-    | `-m`, `--minecraft-version` | Minecraft version to use (1.17, 1.18, or 1.19)             | 1.19        |
+    | `-m`, `--minecraft-version` | Minecraft version to use (1.17, 1.18, or 1.19+)            | 1.19+       |
     | `-s`, `--seed`              | Seed of your world                                         | 0           |
     | `-r`, `--search-radius`     | Radius of chunks to search over                            | 1000        |
     | `-g`, `--geode-threshold`   | Minimum number of geodes in a cluster                      | 20          |
