@@ -271,7 +271,7 @@ fn search_budding<V: Version>(args: &Args) -> Result<Vec<BuddingCluster>> {
         .collect();
 
     budding_clusters
-        .par_sort_unstable_by_key(|a| (cmp::Reverse(a.budding_count), a.center_z, a.center_z));
+        .par_sort_unstable_by_key(|a| (cmp::Reverse(a.budding_count), a.center_z, a.center_x));
 
     Ok(budding_clusters)
 }
