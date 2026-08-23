@@ -1,10 +1,10 @@
 use std::{
-    cmp,
+    cmp::Reverse,
     collections::HashMap,
     fmt,
     fs::File,
     io::BufWriter,
-    ops,
+    ops::Range,
     sync::{
         Arc,
         atomic::{AtomicU64, Ordering},
@@ -25,14 +25,14 @@ use serde::Serialize;
 
 use crate::{Args, geode::Geode, version::Version};
 
-#[derive(Debug, Serialize, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub struct GeodeCluster {
     geode_count: u32,
     center_x: i64,
     center_z: i64,
 }
 
-#[derive(Debug, Serialize, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub struct BuddingCluster {
     budding_count: u32,
     geode_count: u32,
@@ -54,14 +54,14 @@ fn build_configured_pool(threads: usize) -> Result<ThreadPool> {
     Ok(ThreadPoolBuilder::new().num_threads(threads).build()?)
 }
 
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 struct SharedSearchConfig {
     seed: i64,
     loaded_radius: u8,
     geode_threshold: u32,
     progress_position: Arc<AtomicU64>,
     total_clusters: Arc<AtomicU64>,
-    z_range: ops::Range<i64>,
+    z_range: Range<i64>,
 }
 
 const PROGRESS_INTERVAL: u16 = 256;
@@ -76,7 +76,7 @@ fn search_geodes_tile<V: Version>(
     let loaded_radius = i64::from(shared.loaded_radius);
     let loaded_diameter = usize::from(shared.loaded_radius) * 2 + 1;
 
-    let tile_width = usize::try_from((end_x - start_x).abs()).unwrap();
+    let tile_width = (end_x - start_x) as usize;
     let mut chunk_history: Vec<u8> = vec![0; tile_width * loaded_diameter];
     // Add loaded_diameter to accomodate buffer zone and index without branch later
     let mut column_history: Vec<u32> = vec![0; tile_width + loaded_diameter];
@@ -130,7 +130,7 @@ fn search_geodes_tile<V: Version>(
 }
 
 fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
-    let search_radius = usize::try_from(args.search_radius)?;
+    let search_radius = args.search_radius as usize;
     let loaded_radius = args.loaded_radius;
     let geode_threshold = args.geode_threshold;
 
@@ -151,7 +151,7 @@ fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
         let style = ProgressStyle::with_template(
             "[{bar}] {percent_precise}% ({eta_precise} left), {msg} potential clusters found ",
         )?;
-        ProgressBar::new(u64::try_from(search_diameter * args.threads).unwrap())
+        ProgressBar::new((search_diameter * args.threads) as u64)
             .with_style(style)
             .with_message("0")
     };
@@ -195,7 +195,7 @@ fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
         .flat_map(|i| {
             let tile_start_x = start_x + (i as i64 * chunk_size);
             if tile_start_x >= end_x {
-                return vec![];
+                return Vec::new();
             }
             let tile_end_x = (tile_start_x + chunk_size + loaded_diameter).min(end_x);
 
@@ -207,7 +207,7 @@ fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
     tx.send(())?;
     handle
         .join()
-        .map_err(|e| anyhow::anyhow!("UI thread panicked: {:?}", e))?;
+        .map_err(|err| anyhow::anyhow!("UI thread panicked: {err:?}"))?;
 
     Ok(geodes)
 }
@@ -219,8 +219,9 @@ fn process_clusters<V: Version>(
     budding_threshold: u32,
 ) -> Vec<BuddingCluster> {
     let mut geode = Geode::<V>::new(seed);
+    let loaded_area = (loaded_radius as usize).pow(2);
+
     let mut budding_clusters: Vec<BuddingCluster> = Vec::with_capacity(256);
-    let loaded_area = usize::try_from(loaded_radius).unwrap().pow(2);
     let mut cached_budding: HashMap<(i64, i64), u32> = HashMap::with_capacity(loaded_area * 2);
 
     for cluster in geode_clusters {
@@ -244,16 +245,15 @@ fn process_clusters<V: Version>(
         }
 
         if budding_count >= budding_threshold {
-            let center_x_blocks = center_x * 16;
-            let center_z_blocks = center_y * 16;
-            let cluster = BuddingCluster {
-                center_x: center_x_blocks,
-                center_z: center_z_blocks,
+            let budding_cluster = BuddingCluster {
+                center_x: center_x * 16,
+                center_z: center_y * 16,
                 geode_count: cluster.geode_count,
                 budding_count,
             };
-            println!("{}", cluster);
-            budding_clusters.push(cluster)
+
+            println!("{budding_cluster}");
+            budding_clusters.push(budding_cluster);
         }
     }
 
@@ -276,7 +276,7 @@ fn search_budding<V: Version>(args: &Args) -> Result<Vec<BuddingCluster>> {
         .collect();
 
     budding_clusters
-        .par_sort_unstable_by_key(|a| (cmp::Reverse(a.budding_count), a.center_z, a.center_x));
+        .par_sort_unstable_by_key(|c| (Reverse(c.budding_count), c.center_z, c.center_x));
 
     Ok(budding_clusters)
 }

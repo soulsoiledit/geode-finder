@@ -96,14 +96,14 @@ impl<V: Version> Geode<V> {
 
         let crack_points = should_generate_crack.then(|| {
             let crack = num_points * 2 + 1;
-            let cracks = [(crack, 0), (0, crack), (crack, crack), (0, 0)];
+            let cracks: [(i32, i32); 4] = [(crack, 0), (0, crack), (crack, crack), (0, 0)];
             let (dx, dz) = cracks[self.random.next_int(4) as usize];
             [7, 5, 1].map(|dy| origin.add(dx, dy, dz))
         });
 
         let mut budding_count = 0;
 
-        let range = |o: i32| o - V::OFFSET..=o + V::OFFSET;
+        let range = |center: i32| center - V::OFFSET..=center + V::OFFSET;
         for z in range(origin.z) {
             let zf = f64::from(z);
             for y in range(origin.y) {
@@ -115,21 +115,21 @@ impl<V: Version> Geode<V> {
                     let noise_offset = self.noise.get(xf, yf, zf) * V::NOISE_MULTIPLIER;
 
                     let mut shell_sum = 0.0;
-                    for (point, offset) in &points {
-                        shell_sum += V::inv_sqrt(V::distance_sq(&block, point) + (*offset));
+                    for &(point, offset) in &points {
+                        shell_sum += V::inv_sqrt(V::distance_sq(&block, &point) + offset);
                     }
                     shell_sum += noise_offset * num_points_f;
 
                     let in_solid_geode = shell_sum >= basalt_dist && shell_sum < air_dist;
                     if in_solid_geode {
-                        let mut crack_sum = 0.0;
-                        if let Some(crack_points) = crack_points {
-                            for point in crack_points {
-                                crack_sum +=
+                        let crack_sum = crack_points.map_or(0.0, |cracked| {
+                            let mut sum = 0.0;
+                            for point in cracked {
+                                sum +=
                                     V::inv_sqrt(V::distance_sq(&block, &point) + V::CRACK_OFFSET);
                             }
-                            crack_sum += noise_offset * 3.0;
-                        }
+                            sum + noise_offset * 3.0
+                        });
 
                         let in_crack = should_generate_crack && crack_sum >= crack_size;
                         if !in_crack && shell_sum >= amethyst_dist {

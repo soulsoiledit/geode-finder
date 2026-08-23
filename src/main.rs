@@ -19,8 +19,8 @@ use crate::{
 const WORLD_BORDER: i64 = 30_000_000 / 16;
 const BORDER_RANGE: RangeInclusive<i64> = -WORLD_BORDER..=WORLD_BORDER;
 
-#[derive(Debug, Copy, Clone, ValueEnum)]
-pub enum VersionArgument {
+#[derive(Debug, Clone, Copy, ValueEnum)]
+enum VersionArgument {
     /// 1.17
     #[clap(name = "1.17")]
     MC17,
@@ -115,12 +115,13 @@ impl Default for Args {
 fn main() -> Result<()> {
     let args = &Args::parse();
     let version = args.minecraft_version;
+
     if args.estimate {
         match version {
             VersionArgument::MC17 => estimate_clusters::<MC17>(args),
             VersionArgument::MC18 => estimate_clusters::<MC18>(args),
             VersionArgument::MC19 => estimate_clusters::<MC19>(args),
-        };
+        }
     } else {
         match version {
             VersionArgument::MC17 => search::<MC17>(args),

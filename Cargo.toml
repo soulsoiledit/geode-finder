@@ -8,6 +8,24 @@ license = "MIT"
 keywords = ["minecraft", "amethyst", "geode", "finder", "search"]
 categories = ["command-line-utilities"]
 
+[lints.clippy]
+cargo_common_metadata = "warn"
+
+# require documentation of allow rules
+allow_attributes = "warn"
+allow_attributes_without_reason = "warn"
+
+# require documentation for panics
+missing_assert_message = "warn"
+unwrap_used = "deny"
+
+# avoid consuming errors
+unused_result_ok = "warn"
+
+# this just annoys me
+semicolon_if_nothing_returned = "warn"
+unnecessary_semicolon = "warn"
+
 [dependencies]
 anyhow = "1.0.104"
 clap = { version = "4.6.4", features = ["derive"] }

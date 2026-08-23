@@ -13,11 +13,7 @@ impl Block {
     }
 
     pub const fn add(&self, dx: i32, dy: i32, dz: i32) -> Self {
-        Self {
-            x: self.x + dx,
-            y: self.y + dy,
-            z: self.z + dz,
-        }
+        Self::new(self.x + dx, self.y + dy, self.z + dz)
     }
 }
 
@@ -36,7 +32,7 @@ pub trait Random {
 
         if bound.cast_unsigned().is_power_of_two() {
             return i64::from(bound)
-                .wrapping_mul(i64::from(self.next_bits(31)))
+                .wrapping_mul(self.next_bits(31).into())
                 .wrapping_shr(31) as i32;
         }
 
@@ -70,14 +66,14 @@ pub trait Random {
         upper.wrapping_shl(27).wrapping_add(lower) as f64 * Self::DOUBLE_MULTIPLIER
     }
 
-    fn skip(&mut self, steps: i32) {
+    fn skip(&mut self, steps: usize) {
         for _ in 0..steps {
             self.next_bits(32);
         }
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct Xoroshiro128PlusPlusRandom {
     seed_hi: i64,
     seed_lo: i64,
@@ -152,7 +148,7 @@ impl Random for Xoroshiro128PlusPlusRandom {
 }
 
 // LegacyRandomSource (LCG)
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct JavaRandom {
     seed: i64,
 }
