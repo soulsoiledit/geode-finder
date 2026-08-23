@@ -1,9 +1,5 @@
 use std::ops::RangeInclusive;
 
-pub fn inv_sqrt(x: f64) -> f64 {
-    x.sqrt().recip()
-}
-
 #[derive(Debug, Clone, Copy)]
 pub struct Block {
     pub x: i32,

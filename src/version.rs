@@ -1,7 +1,7 @@
 use std::ops::RangeInclusive;
 
 use crate::{
-    math::{self, Block, JavaRandom, Random, Xoroshiro128PlusPlusRandom},
+    math::{Block, JavaRandom, Random, Xoroshiro128PlusPlusRandom},
     noise::{NormalNoise, PerlinNoise},
 };
 
@@ -87,7 +87,7 @@ pub struct MC19;
 impl Version for MC19 {
     type RANDOM = Xoroshiro128PlusPlusRandom;
 
-    fn inv_sqrt(val: f64) -> f64 {
-        math::inv_sqrt(val)
+    fn inv_sqrt(x: f64) -> f64 {
+        x.sqrt().recip()
     }
 }

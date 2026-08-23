@@ -1,8 +1,12 @@
 use crate::{
-    math::{Block, Random, inv_sqrt},
+    math::{Block, Random},
     noise::NormalNoise,
     version::Version,
 };
+
+fn inv_sqrt(x: f64) -> f64 {
+    x.sqrt().recip()
+}
 
 pub struct Geode<V: Version> {
     seed: i64,
