@@ -182,7 +182,7 @@ impl Random for JavaRandom {
     }
 
     fn set_seed(&mut self, seed: i64) {
-        self.seed = seed ^ Self::MULTIPLIER & Self::MOD_MASK;
+        self.seed = (seed ^ Self::MULTIPLIER) & Self::MOD_MASK;
     }
 
     fn next_bits(&mut self, bits: u32) -> i32 {
