@@ -2,7 +2,7 @@ use std::ops::RangeInclusive;
 
 use crate::{
     math::{self, Block, JavaRandom, Random, Xoroshiro128PlusPlusRandom},
-    noise::{ImprovedNoise, NormalNoise, PerlinNoise},
+    noise::{NormalNoise, PerlinNoise},
 };
 
 pub trait Version {
@@ -24,6 +24,9 @@ pub trait Version {
     const OFFSET: i32 = 16;
     const NOISE_MULTIPLIER: f64 = 0.05;
 
+    const OCTAVE: i32 = -4;
+    const AMPLITUDE: f64 = 1.0;
+
     const SALT: i64 = 20002;
     const CHANCE: f32 = 1.0 / 24.0;
     const Y_RANGE: RangeInclusive<i32> = -58..=30;
@@ -32,11 +35,11 @@ pub trait Version {
         let mut noise_random = JavaRandom::new(seed);
         let first = Self::new_noise(&mut noise_random);
         let second = Self::new_noise(&mut noise_random);
-        NormalNoise::new(PerlinNoise::new(first), PerlinNoise::new(second))
+        NormalNoise::new(first, second, Self::OCTAVE, Self::AMPLITUDE)
     }
 
-    fn new_noise(random: &mut JavaRandom) -> ImprovedNoise {
-        ImprovedNoise::new(&mut random.fork_from_hash())
+    fn new_noise(random: &mut JavaRandom) -> PerlinNoise {
+        PerlinNoise::new(&mut random.fork_from_hash())
     }
 
     fn distance_sq(pos1: &Block, pos2: &Block) -> f64 {
@@ -61,9 +64,9 @@ impl Version for MC17 {
     const CHANCE: f32 = 1.0 / 53.0;
     const Y_RANGE: RangeInclusive<i32> = 6..=46;
 
-    fn new_noise(random: &mut JavaRandom) -> ImprovedNoise {
+    fn new_noise(random: &mut JavaRandom) -> PerlinNoise {
         random.skip(262 * 4);
-        ImprovedNoise::new(random)
+        PerlinNoise::new(random)
     }
 
     // 1.17 measures from centers instead of corners

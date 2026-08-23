@@ -1,6 +1,6 @@
 use crate::{
     math::{Block, Random, inv_sqrt},
-    noise::{Noise, NormalNoise},
+    noise::NormalNoise,
     version::Version,
 };
 
@@ -104,7 +104,7 @@ impl<V: Version> Geode<V> {
                     let xf = f64::from(x);
                     let block = Block::new(x, y, z);
 
-                    let noise_offset = self.noise.get_value(xf, yf, zf) * V::NOISE_MULTIPLIER;
+                    let noise_offset = self.noise.get(xf, yf, zf) * V::NOISE_MULTIPLIER;
 
                     let mut shell_sum = 0.0;
                     for (point, offset) in &points {
