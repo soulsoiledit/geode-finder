@@ -8,15 +8,16 @@ fn inv_sqrt(x: f64) -> f64 {
     x.sqrt().recip()
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct Geode<V: Version> {
     seed: i64,
     x_scale: i64,
-    pub z_scale: i64,
+    z_scale: i64,
     random: V::Random,
     noise: NormalNoise,
 }
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct ScaledZ(pub i64);
 
 impl<V: Version> Geode<V> {
@@ -35,20 +36,23 @@ impl<V: Version> Geode<V> {
         }
     }
 
-    fn get_feature_seed(&self, chunk_x: i64, scaled_z: ScaledZ) -> i64 {
+    pub const fn scale_z(&self, chunk_z: i64) -> ScaledZ {
+        ScaledZ(chunk_z.wrapping_mul(self.z_scale))
+    }
+
+    const fn get_feature_seed(&self, chunk_x: i64, scaled_z: ScaledZ) -> i64 {
         let scaled_x = chunk_x.wrapping_mul(self.x_scale);
         let decoration_seed = scaled_x.wrapping_add(scaled_z.0) ^ self.seed;
         decoration_seed.wrapping_add(V::SALT)
     }
 
     pub fn check(&mut self, chunk_x: i64, chunk_z: i64) -> bool {
-        let scaled_z = ScaledZ(chunk_z.wrapping_mul(self.z_scale));
-        let feature_seed = self.get_feature_seed(chunk_x, scaled_z);
+        let feature_seed = self.get_feature_seed(chunk_x, self.scale_z(chunk_z));
         self.random.set_seed(feature_seed);
         self.random.next_float() < V::CHANCE
     }
 
-    pub fn check_fast(&mut self, chunk_x: i64, scaled_z: ScaledZ) -> bool {
+    pub fn check_fast(&self, chunk_x: i64, scaled_z: ScaledZ) -> bool {
         let feature_seed = self.get_feature_seed(chunk_x, scaled_z);
         // uses derived int constant to avoid float division and <= for parity
         V::Random::next_seed_bits(feature_seed, 24) <= Self::CHANCE_INT

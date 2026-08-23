@@ -21,11 +21,7 @@ use rayon::{
 };
 use serde::Serialize;
 
-use crate::{
-    Args,
-    geode::{Geode, ScaledZ},
-    version::Version,
-};
+use crate::{Args, geode::Geode, version::Version};
 
 #[derive(Debug, Serialize, PartialEq, PartialOrd, Eq, Ord)]
 pub struct GeodeCluster {
@@ -72,7 +68,7 @@ fn search_geodes_tile<V: Version>(
     start_x: i64,
     end_x: i64,
 ) -> Vec<GeodeCluster> {
-    let mut geode = Geode::<V>::new(shared.seed);
+    let geode = Geode::<V>::new(shared.seed);
     let mut clusters: Vec<GeodeCluster> = Vec::with_capacity(256);
 
     let loaded_radius = i64::from(shared.loaded_radius);
@@ -87,13 +83,13 @@ fn search_geodes_tile<V: Version>(
     let chunk_history_reset = chunk_history.len();
     for (idz, z) in shared.z_range.enumerate() {
         let center_z = z - loaded_radius;
-        let scaled_z = ScaledZ(z.wrapping_mul(geode.z_scale));
+        let scaled_z = geode.scale_z(z);
 
-        let mut geode_count = 0;
         // Slice here to keep current row in cache
         let chunk_history_slice =
             &mut chunk_history[chunk_history_index..chunk_history_index + tile_width];
 
+        let mut geode_count = 0;
         for (idx, idx_ld, x) in (start_x..end_x)
             .enumerate()
             .map(|(idx, x)| (idx, idx + loaded_diameter, x))

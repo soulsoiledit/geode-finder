@@ -141,7 +141,7 @@ impl PerlinNoise {
 #[derive(Debug, Clone, Copy)]
 pub struct NoiseLayer(PerlinNoise, f64);
 
-#[derive(Clone, Copy)]
+#[derive(Debug, Clone, Copy)]
 pub struct NormalNoise {
     first: NoiseLayer,
     second: NoiseLayer,
