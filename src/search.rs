@@ -306,16 +306,8 @@ mod tests {
     fn test_args() -> Args {
         Args {
             minecraft_version: VersionArgument::MC19,
-            seed: 0,
-            search_radius: 1000,
-            geode_threshold: 20,
-            budding_threshold: 800,
-            threads: 1,
             output_path: None,
-            loaded_radius: 6,
-            center_x: 0,
-            center_z: 0,
-            estimate: false,
+            ..Default::default()
         }
     }
 
