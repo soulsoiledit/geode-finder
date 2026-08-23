@@ -235,9 +235,11 @@ fn process_clusters<V: Version>(
         let mut budding_count = 0;
         for x in min_x..=max_x {
             for z in min_z..=max_z {
-                budding_count += *cached_budding
-                    .entry((x, z))
-                    .or_insert_with(|| geode.generate(x, z));
+                if geode.check(x, z) {
+                    budding_count += *cached_budding
+                        .entry((x, z))
+                        .or_insert_with(|| geode.generate(x, z));
+                }
             }
         }
 
