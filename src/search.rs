@@ -7,9 +7,11 @@ use std::{
     ops,
     sync::{
         Arc,
-        atomic::{self, AtomicU64},
+        atomic::{AtomicU64, Ordering},
+        mpsc::{self, RecvTimeoutError},
     },
-    thread, time,
+    thread,
+    time::Duration,
 };
 
 use anyhow::Result;
@@ -108,9 +110,7 @@ fn search_geodes_tile<V: Version>(
                     center_z,
                     geode_count,
                 });
-                shared
-                    .total_clusters
-                    .fetch_add(1, atomic::Ordering::Relaxed);
+                shared.total_clusters.fetch_add(1, Ordering::Relaxed);
             }
         }
 
@@ -122,7 +122,7 @@ fn search_geodes_tile<V: Version>(
         if idz % usize::from(PROGRESS_INTERVAL) == 0 {
             shared
                 .progress_position
-                .fetch_add(u64::from(PROGRESS_INTERVAL), atomic::Ordering::Relaxed);
+                .fetch_add(u64::from(PROGRESS_INTERVAL), Ordering::Relaxed);
         }
     }
 
@@ -156,7 +156,8 @@ fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
             .with_message("0")
     };
 
-    // Run UI on a different thread
+    // Run UI on a different thread with a single interrupt signal
+    let (tx, rx) = mpsc::sync_channel::<()>(1);
     let handle = {
         let progress_position = progress_position.clone();
         let total_clusters = total_clusters.clone();
@@ -164,12 +165,15 @@ fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
 
         thread::spawn(move || {
             loop {
-                progress_bar.set_position(progress_position.load(atomic::Ordering::Relaxed));
-                progress_bar
-                    .set_message(total_clusters.load(atomic::Ordering::Relaxed).to_string());
-                thread::sleep(time::Duration::from_millis(100));
+                let search_finished = matches!(
+                    rx.recv_timeout(Duration::from_millis(100)),
+                    Ok(_) | Err(RecvTimeoutError::Disconnected)
+                );
 
-                if progress_bar.is_finished() {
+                progress_bar.set_position(progress_position.load(Ordering::Relaxed));
+                progress_bar.set_message(total_clusters.load(Ordering::Relaxed).to_string());
+
+                if search_finished {
                     break;
                 }
             }
@@ -200,6 +204,7 @@ fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
         .collect();
 
     progress_bar.finish();
+    tx.send(())?;
     handle
         .join()
         .map_err(|e| anyhow::anyhow!("UI thread panicked: {:?}", e))?;
