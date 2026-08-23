@@ -12,7 +12,7 @@ use clap::{Parser, ValueEnum, ValueHint::FilePath, value_parser};
 
 use crate::{
     estimate::estimate_clusters,
-    search::search_budding,
+    search::search,
     version::{MC17, MC18, MC19},
 };
 
@@ -101,9 +101,9 @@ fn main() -> Result<()> {
         };
     } else {
         match version {
-            VersionArgument::MC17 => search_budding::<MC17>(args),
-            VersionArgument::MC18 => search_budding::<MC18>(args),
-            VersionArgument::MC19 => search_budding::<MC19>(args),
+            VersionArgument::MC17 => search::<MC17>(args),
+            VersionArgument::MC18 => search::<MC18>(args),
+            VersionArgument::MC19 => search::<MC19>(args),
         }?;
     }
 

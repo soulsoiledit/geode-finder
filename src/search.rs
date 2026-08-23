@@ -1,7 +1,10 @@
 use std::{
     cmp,
     collections::HashMap,
-    fmt, fs, io, ops,
+    fmt,
+    fs::File,
+    io::BufWriter,
+    ops,
     sync::{
         Arc,
         atomic::{self, AtomicU64},
@@ -77,8 +80,7 @@ fn search_geodes_tile<V: Version>(
 
     let tile_width = usize::try_from((end_x - start_x).abs()).unwrap();
     let mut chunk_history: Vec<u8> = vec![0; tile_width * loaded_diameter];
-    // Add loaded_diameter to accomodate buffer zone
-    // and index without branch later
+    // Add loaded_diameter to accomodate buffer zone and index without branch later
     let mut column_history: Vec<u32> = vec![0; tile_width + loaded_diameter];
 
     let mut chunk_history_index = 0;
@@ -133,7 +135,7 @@ fn search_geodes_tile<V: Version>(
     clusters
 }
 
-fn search_geodes<V: Version>(args: &crate::Args, pool: &ThreadPool) -> Result<Vec<GeodeCluster>> {
+fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
     let search_radius = usize::try_from(args.search_radius)?;
     let loaded_radius = args.loaded_radius;
     let geode_threshold = args.geode_threshold;
@@ -190,20 +192,18 @@ fn search_geodes<V: Version>(args: &crate::Args, pool: &ThreadPool) -> Result<Ve
     };
 
     let chunk_size = search_diameter.div_ceil(args.threads) as i64;
-    let geodes: Vec<GeodeCluster> = pool.install(|| {
-        (0..args.threads)
-            .into_par_iter()
-            .flat_map(|i| {
-                let tile_start_x = start_x + (i as i64 * chunk_size);
-                if tile_start_x >= end_x {
-                    return vec![];
-                }
-                let tile_end_x = (tile_start_x + chunk_size + loaded_diameter).min(end_x);
+    let geodes: Vec<GeodeCluster> = (0..args.threads)
+        .into_par_iter()
+        .flat_map(|i| {
+            let tile_start_x = start_x + (i as i64 * chunk_size);
+            if tile_start_x >= end_x {
+                return vec![];
+            }
+            let tile_end_x = (tile_start_x + chunk_size + loaded_diameter).min(end_x);
 
-                search_geodes_tile::<V>(shared.clone(), tile_start_x, tile_end_x)
-            })
-            .collect()
-    });
+            search_geodes_tile::<V>(shared.clone(), tile_start_x, tile_end_x)
+        })
+        .collect();
 
     progress_bar.finish();
     handle
@@ -213,7 +213,7 @@ fn search_geodes<V: Version>(args: &crate::Args, pool: &ThreadPool) -> Result<Ve
     Ok(geodes)
 }
 
-pub fn process_clusters<V: Version>(
+fn process_clusters<V: Version>(
     geode_clusters: &[GeodeCluster],
     seed: i64,
     loaded_radius: i64,
@@ -259,40 +259,40 @@ pub fn process_clusters<V: Version>(
     budding_clusters
 }
 
-pub fn search_budding<V: Version>(args: &Args) -> Result<Vec<BuddingCluster>> {
-    let writer = match &args.output_path {
-        Some(output_path) => {
-            let file = fs::File::create(output_path)?;
-            Some(io::BufWriter::new(file))
-        }
-        None => None,
-    };
-
-    let threads = args.threads;
-    let pool = build_configured_pool(threads)?;
-
+fn search_budding<V: Version>(args: &Args) -> Result<Vec<BuddingCluster>> {
     let seed = args.seed;
     let loaded_radius = i64::from(args.loaded_radius);
     let budding_threshold = args.budding_threshold;
 
-    let geode_clusters = search_geodes::<V>(args, &pool)?;
-    let mut budding_clusters: Vec<BuddingCluster> = pool.install(|| {
-        let chunk_size = geode_clusters.len().div_ceil(threads).max(1);
-        geode_clusters
-            .par_chunks(chunk_size)
-            .flat_map(|clusters| {
-                process_clusters::<V>(clusters, seed, loaded_radius, budding_threshold)
-            })
-            .collect()
-    });
+    let geode_clusters = search_geodes::<V>(args)?;
 
-    pool.install(|| {
-        budding_clusters
-            .par_sort_unstable_by_key(|a| (cmp::Reverse(a.budding_count), a.center_z, a.center_z));
-    });
+    let chunk_size = geode_clusters.len().div_ceil(args.threads).max(1);
+    let mut budding_clusters: Vec<BuddingCluster> = geode_clusters
+        .par_chunks(chunk_size)
+        .flat_map(|clusters| {
+            process_clusters::<V>(clusters, seed, loaded_radius, budding_threshold)
+        })
+        .collect();
 
-    if let Some(writer) = writer {
-        serde_json::to_writer_pretty(writer, &budding_clusters)?;
+    budding_clusters
+        .par_sort_unstable_by_key(|a| (cmp::Reverse(a.budding_count), a.center_z, a.center_z));
+
+    Ok(budding_clusters)
+}
+
+pub fn search<V: Version>(args: &Args) -> Result<Vec<BuddingCluster>> {
+    let writer = args
+        .output_path
+        .as_ref()
+        .map(File::create)
+        .transpose()?
+        .map(BufWriter::new);
+
+    let budding_clusters =
+        build_configured_pool(args.threads)?.install(|| search_budding::<V>(args))?;
+
+    if let Some(w) = writer {
+        serde_json::to_writer_pretty(w, &budding_clusters)?;
     }
 
     Ok(budding_clusters)
@@ -320,19 +320,21 @@ mod tests {
     }
 
     #[test]
-    fn test_search_geodes() -> Result<()> {
+    fn search_geodes() -> Result<()> {
         let args = &test_args();
-        let clusters = search_geodes::<MC19>(args, &build_configured_pool(args.threads)?)?;
+        let pool = build_configured_pool(args.threads)?;
+        let clusters = pool.install(|| super::search_geodes::<MC19>(args))?;
+
         assert_eq!(clusters.len(), 189);
-        assert_eq!(clusters.iter().max().map_or(0, |m| m.geode_count), 23);
+        assert_eq!(clusters.iter().max().map_or(0, |c| c.geode_count), 23);
         Ok(())
     }
 
     #[test]
-    fn test_search_budding() {
-        if let Ok(clusters) = search_budding::<MC19>(&test_args()) {
-            assert_eq!(clusters.len(), 40);
-            assert_eq!(clusters.iter().max().map_or(0, |m| m.budding_count), 911);
-        }
+    fn search() -> Result<()> {
+        let clusters = super::search::<MC19>(&test_args())?;
+        assert_eq!(clusters.len(), 40);
+        assert_eq!(clusters.iter().max().map_or(0, |c| c.budding_count), 911);
+        Ok(())
     }
 }
