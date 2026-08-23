@@ -1,5 +1,7 @@
+use std::ops::RangeInclusive;
+
 use crate::{
-    math::{self, Block, JavaRandom, Random, UniformInt, Xoroshiro128PlusPlusRandom},
+    math::{self, Block, JavaRandom, Random, Xoroshiro128PlusPlusRandom},
     noise::{ImprovedNoise, NormalNoise, PerlinNoise},
 };
 
@@ -15,16 +17,16 @@ pub trait Version {
     const CRACK_OFFSET: f64 = 2.0;
 
     const BUDDING_CHANCE: f64 = 0.083;
-    const RADIUS: UniformInt = UniformInt::new(4, 6);
-    const POINTS: UniformInt = UniformInt::new(3, 4);
-    const POINT_OFFSET: UniformInt = UniformInt::new(1, 2);
+    const RADIUS: RangeInclusive<i32> = 4..=6;
+    const POINTS: RangeInclusive<i32> = 3..=4;
+    const POINT_OFFSET: RangeInclusive<i32> = 1..=2;
 
     const OFFSET: i32 = 16;
     const NOISE_MULTIPLIER: f64 = 0.05;
 
     const SALT: i64 = 20002;
     const CHANCE: f32 = 1.0 / 24.0;
-    const Y_RANGE: UniformInt = UniformInt::new(-58, 30);
+    const Y_RANGE: RangeInclusive<i32> = -58..=30;
 
     fn new_normal_noise(seed: i64) -> NormalNoise {
         let mut noise_random = JavaRandom::new(seed);
@@ -57,7 +59,7 @@ impl Version for MC17 {
 
     const SALT: i64 = 20000;
     const CHANCE: f32 = 1.0 / 53.0;
-    const Y_RANGE: UniformInt = UniformInt::new(6, 46);
+    const Y_RANGE: RangeInclusive<i32> = 6..=46;
 
     fn new_noise(random: &mut JavaRandom) -> ImprovedNoise {
         random.skip(262 * 4);

@@ -58,13 +58,13 @@ impl<V: Version> Geode<V> {
         let origin = {
             let x = self.random.next_int(16) + chunk_x as i32 * 16;
             let z = self.random.next_int(16) + chunk_z as i32 * 16;
-            let y = V::Y_RANGE.sample(&mut self.random);
+            let y = self.random.next_between(V::Y_RANGE);
             Block::new(x, y, z)
         };
 
-        let num_points = V::POINTS.sample(&mut self.random);
+        let num_points = self.random.next_between(V::POINTS);
         let num_points_f = f64::from(num_points);
-        let crack_size_adjustment = num_points_f / f64::from(V::RADIUS.max);
+        let crack_size_adjustment = num_points_f / f64::from(*V::RADIUS.end());
 
         let air_dist = inv_sqrt(V::AIR_LAYER);
         let amethyst_dist = inv_sqrt(V::AMETHYST_LAYER + crack_size_adjustment);
@@ -79,9 +79,9 @@ impl<V: Version> Geode<V> {
 
         let points: Vec<(Block, f64)> = (0..num_points)
             .map(|_| {
-                let mut next_coord = || V::RADIUS.sample(&mut self.random);
+                let mut next_coord = || self.random.next_between(V::RADIUS);
                 let point = origin.add(next_coord(), next_coord(), next_coord());
-                let offset = f64::from(V::POINT_OFFSET.sample(&mut self.random));
+                let offset = f64::from(self.random.next_between(V::POINT_OFFSET));
                 (point, offset)
             })
             .collect();

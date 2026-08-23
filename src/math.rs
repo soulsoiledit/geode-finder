@@ -1,3 +1,5 @@
+use std::ops::RangeInclusive;
+
 pub fn inv_sqrt(x: f64) -> f64 {
     x.sqrt().recip()
 }
@@ -49,8 +51,9 @@ pub trait Random {
         }
     }
 
-    fn next_between(&mut self, mini: i32, maxi: i32) -> i32 {
-        self.next_int(maxi - mini + 1) + mini
+    fn next_between(&mut self, range: RangeInclusive<i32>) -> i32 {
+        let (min, max) = (range.start(), range.end());
+        self.next_int(max - min + 1) + min
     }
 
     fn next_long(&mut self) -> i64 {
@@ -182,22 +185,6 @@ impl Random for JavaRandom {
     }
 }
 
-#[derive(Clone, Copy)]
-pub struct UniformInt {
-    pub min: i32,
-    pub max: i32,
-}
-
-impl UniformInt {
-    pub const fn new(min: i32, max: i32) -> Self {
-        Self { min, max }
-    }
-
-    pub fn sample(&self, random: &mut impl Random) -> i32 {
-        random.next_between(self.min, self.max)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -219,7 +206,7 @@ mod tests {
         TestRandomResult {
             bits: random.next_bits(32),
             int: random.next_int(256),
-            between: random.next_between(16, 64),
+            between: random.next_between(16..=64),
             long: random.next_long(),
             float: random.next_float(),
             double: random.next_double(),
