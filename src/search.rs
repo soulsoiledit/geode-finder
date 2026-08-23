@@ -90,17 +90,15 @@ fn search_geodes_tile<V: Version>(
             &mut chunk_history[chunk_history_index..chunk_history_index + tile_width];
 
         let mut geode_count = 0;
-        for (idx, idx_ld, x) in (start_x..end_x)
-            .enumerate()
-            .map(|(idx, x)| (idx, idx + loaded_diameter, x))
-        {
+        for (idx, x) in (start_x..end_x).enumerate() {
             let is_geode = u8::from(geode.check_fast(x, scaled_z));
 
             let old_geode = chunk_history_slice[idx];
             chunk_history_slice[idx] = is_geode;
 
-            let new_column = column_history[idx_ld] + u32::from(is_geode) - u32::from(old_geode);
-            column_history[idx_ld] = new_column;
+            let new_column =
+                column_history[idx + loaded_diameter] + u32::from(is_geode) - u32::from(old_geode);
+            column_history[idx + loaded_diameter] = new_column;
 
             geode_count += new_column;
             geode_count -= column_history[idx];
