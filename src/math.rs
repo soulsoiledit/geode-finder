@@ -36,6 +36,8 @@ pub trait Random {
     fn next_seed_bits(seed: i64, bits: u32) -> i32;
 
     fn next_int(&mut self, bound: i32) -> i32 {
+        assert!(bound > 0, "bound should always be positive: found {bound}");
+
         if bound.cast_unsigned().is_power_of_two() {
             return i64::from(bound)
                 .wrapping_mul(i64::from(self.next_bits(31)))
@@ -116,29 +118,39 @@ impl Random for Xoroshiro128PlusPlusRandom {
 
         self.seed_lo = Self::splitmix64(seed_lo);
         self.seed_hi = Self::splitmix64(seed_hi);
+
+        // Should never happen
+        if (self.seed_lo | self.seed_hi) == 0 {
+            self.seed_lo = Self::GOLDEN_RATIO;
+            self.seed_hi = Self::SILVER_RATIO;
+        }
     }
 
     fn next_bits(&mut self, bits: u32) -> i32 {
         let lo = self.seed_lo;
-        let hi = self.seed_hi;
-        let xor = hi ^ lo;
-        self.seed_lo = lo.rotate_left(49) ^ xor ^ (xor.wrapping_shl(21));
-        self.seed_hi = xor.rotate_left(28);
+        let mut hi = self.seed_hi;
         let result = lo.wrapping_add(hi).rotate_left(17).wrapping_add(lo);
+
+        hi ^= lo;
+        self.seed_lo = lo.rotate_left(49) ^ hi ^ (hi.wrapping_shl(21));
+        self.seed_hi = hi.rotate_left(28);
+
         result.cast_unsigned().wrapping_shr(64 - bits) as i32
     }
 
     fn next_seed_bits(seed: i64, bits: u32) -> i32 {
-        let mut seed_lo = seed ^ Self::SILVER_RATIO;
-        let mut seed_hi = seed_lo.wrapping_add(Self::GOLDEN_RATIO);
+        let mut lo = seed ^ Self::SILVER_RATIO;
+        let mut hi = lo.wrapping_add(Self::GOLDEN_RATIO);
 
-        seed_lo = Self::splitmix64(seed_lo);
-        seed_hi = Self::splitmix64(seed_hi);
+        lo = Self::splitmix64(lo);
+        hi = Self::splitmix64(hi);
 
-        let result = seed_lo
-            .wrapping_add(seed_hi)
-            .rotate_left(17)
-            .wrapping_add(seed_lo);
+        if (lo | hi) == 0 {
+            lo = Self::GOLDEN_RATIO;
+            hi = Self::SILVER_RATIO;
+        }
+
+        let result = lo.wrapping_add(hi).rotate_left(17).wrapping_add(lo);
         result.cast_unsigned().wrapping_shr(64 - bits) as i32
     }
 }
