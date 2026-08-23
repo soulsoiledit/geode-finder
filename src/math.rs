@@ -201,70 +201,79 @@ impl Random for JavaRandom {
 mod tests {
     use super::*;
 
-    const SEED: i64 = 0;
-
-    #[derive(Debug, PartialEq)]
-    struct TestRandomResult {
-        bits: i32,
-        int: i32,
-        between: i32,
-        long: i64,
-        float: f32,
-        double: f64,
-        skip: i32,
-    }
-
-    fn test_random(random: &mut impl Random) -> TestRandomResult {
-        TestRandomResult {
-            bits: random.next_bits(32),
-            int: random.next_int(256),
-            between: random.next_between(16..=64),
-            long: random.next_long(),
-            float: random.next_float(),
-            double: random.next_double(),
-            skip: {
-                random.skip(1);
-                random.next_int(256)
-            },
-        }
-    }
+    const SEED: i64 = 0xDEAD_BEEF;
 
     #[test]
-    fn test_xoroshiro_random() {
-        assert_eq!(
-            test_random(&mut Xoroshiro128PlusPlusRandom::new(SEED)),
-            TestRandomResult {
-                bits: 707568776,
-                int: 204,
-                between: 47,
-                long: 2160572956399813066,
-                float: 0.7566797,
-                double: 0.7723285845227084,
-                skip: 156,
-            }
-        );
-        assert_eq!(
-            Xoroshiro128PlusPlusRandom::next_seed_bits(SEED, 32),
-            707568776
-        );
-    }
-
-    #[test]
-    fn test_java_random() {
+    fn random() {
         let mut random = JavaRandom::new(SEED);
         assert_eq!(
-            test_random(&mut random),
-            TestRandomResult {
-                bits: -1155484576,
-                int: 212,
-                between: 41,
-                long: -7261648964369397258,
-                float: 0.30905056,
-                double: 0.5504370051176339,
-                skip: 200,
-            }
+            random.next_int(256),
+            33,
+            "next_int failed for power-of-2 bound"
         );
-        assert_eq!(JavaRandom::next_seed_bits(SEED, 32), -1155484576);
-        assert_eq!(random.fork_from_hash().next_int(256), 2);
+        assert_eq!(
+            random.next_int(192),
+            152,
+            "next_int failed for non power-of-2 bound"
+        );
+        assert_eq!(random.next_between(192..=256), 222, "next_between failed");
+        assert_eq!(random.next_long(), 1683040361022731026, "next_long failed");
+        assert_eq!(random.next_float(), 0.8564069, "next_float failed");
+        assert_eq!(
+            random.next_double(),
+            0.544608645520025,
+            "next_double failed"
+        );
+        random.skip(256);
+        assert_eq!(random.next_int(256), 103, "skip failed");
+    }
+
+    #[test]
+    fn java_random() {
+        let mut random = JavaRandom::new(SEED);
+
+        let bits = (0..256).map(|_| random.next_bits(32)).last();
+        assert_eq!(bits, Some(-1183353915), "random progression failed");
+
+        random.set_seed(SEED);
+        for _ in 0..256 {
+            let seed = random.next_long();
+            assert_eq!(
+                {
+                    random.set_seed(seed);
+                    random.next_bits(32)
+                },
+                JavaRandom::next_seed_bits(seed, 32),
+                "next_bits and next_seed_bits mismatched"
+            );
+        }
+
+        random.set_seed(SEED);
+        assert_eq!(
+            random.fork_from_hash().next_long(),
+            -3702631657396612959,
+            "forked next_int failed"
+        );
+    }
+
+    #[test]
+    fn xoroshiro_random() {
+        let mut random = Xoroshiro128PlusPlusRandom::new(SEED);
+
+        let bits = (0..256).map(|_| random.next_bits(32)).last();
+        assert_eq!(bits, Some(1573955217), "random progression failed");
+
+        random.set_seed(SEED);
+        for _ in 0..256 {
+            let seed = random.next_long();
+            assert_eq!(
+                {
+                    random.set_seed(seed);
+                    random.next_bits(32)
+                },
+                Xoroshiro128PlusPlusRandom::next_seed_bits(seed, 32),
+                "next_bits and next_seed_bits mismatched"
+            );
+        }
     }
 }

@@ -152,95 +152,67 @@ impl<V: Version> Geode<V> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::version;
+    use crate::version::{MC17, MC18, MC19};
 
-    const SEED: i64 = 0;
-    const RANGE: i64 = 16;
-    const FAR: i64 = 1_875_000;
-
-    #[derive(Debug, PartialEq)]
-    struct TestGeodeResult {
+    #[derive(Debug, Clone, Copy)]
+    struct ExpectedGeode {
         geode_count: u32,
         budding_count: u32,
     }
 
-    fn generate<V: Version>(center: i64, geode: &mut Geode<V>) -> TestGeodeResult {
-        let start = center - RANGE;
-        let end = center + RANGE;
+    fn generate<V: Version>(expected: ExpectedGeode) {
+        const SEED: i64 = 0xDEAD_BEEF;
+        const RANGE: i64 = 32;
 
+        let mut geode = Geode::<V>::new(SEED);
         let mut geode_count = 0;
         let mut fast_geode_count = 0;
         let mut budding_count = 0;
-        for cz in start..=end {
-            let scz = cz.wrapping_mul(geode.z_scale);
-            for cx in start..=end {
-                geode_count += u32::from(geode.check(cx, cz));
-                fast_geode_count += u32::from(geode.check_fast(cx, ScaledZ(scz)));
-                budding_count += geode.generate(cx, cz);
+
+        for z in -RANGE..=RANGE {
+            let scaled_z = geode.scale_z(z);
+            for x in -RANGE..=RANGE {
+                geode_count += u32::from(geode.check(x, z));
+                fast_geode_count += u32::from(geode.check_fast(x, scaled_z));
+                budding_count += geode.generate(x, z);
             }
         }
 
-        assert!(geode_count == fast_geode_count);
-        TestGeodeResult {
-            geode_count,
-            budding_count,
-        }
+        assert_eq!(
+            geode_count, expected.geode_count,
+            "geode chunk check failed"
+        );
+        assert_eq!(
+            budding_count, expected.budding_count,
+            "budding amethyst generation failed"
+        );
+        assert_eq!(
+            geode_count, fast_geode_count,
+            "check and check_fast mismatched"
+        );
     }
 
     #[test]
     fn generate_17() {
-        let mut finder = Geode::<version::MC17>::new(SEED);
-        assert_eq!(
-            generate(0, &mut finder),
-            TestGeodeResult {
-                geode_count: 22,
-                budding_count: 804
-            }
-        );
-        assert_eq!(
-            generate(FAR, &mut finder),
-            TestGeodeResult {
-                geode_count: 15,
-                budding_count: 560
-            }
-        );
+        generate::<MC17>(ExpectedGeode {
+            geode_count: 72,
+            budding_count: 2567,
+        });
     }
 
     #[test]
     fn generate_18() {
-        let mut finder = Geode::<version::MC18>::new(SEED);
-        assert_eq!(
-            generate(0, &mut finder),
-            TestGeodeResult {
-                geode_count: 37,
-                budding_count: 1167
-            }
-        );
-        assert_eq!(
-            generate(FAR, &mut finder),
-            TestGeodeResult {
-                geode_count: 39,
-                budding_count: 1518,
-            }
-        );
+        generate::<MC18>(ExpectedGeode {
+            geode_count: 158,
+            budding_count: 5722,
+        });
     }
 
     #[test]
     fn generate_19() {
-        let mut finder = Geode::<version::MC19>::new(SEED);
-        assert_eq!(
-            generate(0, &mut finder),
-            TestGeodeResult {
-                geode_count: 37,
-                budding_count: 1166
-            }
-        );
-        assert_eq!(
-            generate(FAR, &mut finder),
-            TestGeodeResult {
-                geode_count: 39,
-                budding_count: 1521
-            }
-        );
+        generate::<MC19>(ExpectedGeode {
+            geode_count: 158,
+            budding_count: 5736,
+        });
     }
 }
