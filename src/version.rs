@@ -51,7 +51,8 @@ pub trait Version {
 
     // fast inv sqrt
     fn inv_sqrt(x: f64) -> f64 {
-        let i = f64::from_bits(0x5FE6_EB50_C7B5_37AA - (x.to_bits() >> 1));
+        const QUAKE_MAGIC_64: u64 = 0x5FE6_EB50_C7B5_37AA;
+        let i = f64::from_bits(QUAKE_MAGIC_64 - (x.to_bits() >> 1));
         i * (1.5 - (0.5 * x) * i * i)
     }
 }
