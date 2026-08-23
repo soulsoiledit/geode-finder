@@ -12,7 +12,7 @@ pub struct Geode<V: Version> {
     seed: i64,
     x_scale: i64,
     pub z_scale: i64,
-    random: V::RANDOM,
+    random: V::Random,
     noise: NormalNoise,
 }
 
@@ -21,10 +21,10 @@ pub struct ScaledZ(pub i64);
 
 impl<V: Version> Geode<V> {
     // reversed from next_float
-    const CHANCE_INT: i32 = (V::CHANCE * V::RANDOM::FLOAT_MULTIPLIER.recip()) as i32;
+    const CHANCE_INT: i32 = (V::CHANCE * V::Random::FLOAT_MULTIPLIER.recip()) as i32;
 
     pub fn new(seed: i64) -> Self {
-        let mut random = V::RANDOM::new(seed);
+        let mut random = V::Random::new(seed);
         let noise = V::new_normal_noise(seed);
         Self {
             seed,
@@ -51,7 +51,7 @@ impl<V: Version> Geode<V> {
     pub fn check_fast(&mut self, chunk_x: i64, scaled_z: ScaledZ) -> bool {
         let feature_seed = self.get_feature_seed(chunk_x, scaled_z);
         // uses derived int constant to avoid float division and <= for parity
-        V::RANDOM::next_seed_bits(feature_seed, 24) <= Self::CHANCE_INT
+        V::Random::next_seed_bits(feature_seed, 24) <= Self::CHANCE_INT
     }
 
     pub fn generate(&mut self, chunk_x: i64, chunk_z: i64) -> u32 {

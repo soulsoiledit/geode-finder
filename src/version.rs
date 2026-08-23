@@ -6,7 +6,7 @@ use crate::{
 };
 
 pub trait Version {
-    type RANDOM: Random;
+    type Random: Random;
 
     const AIR_LAYER: f64 = 1.7;
     const AMETHYST_LAYER: f64 = 2.2;
@@ -58,7 +58,7 @@ pub trait Version {
 
 pub struct MC17;
 impl Version for MC17 {
-    type RANDOM = JavaRandom;
+    type Random = JavaRandom;
 
     const SALT: i64 = 20000;
     const CHANCE: f32 = 1.0 / 53.0;
@@ -80,12 +80,12 @@ impl Version for MC17 {
 
 pub struct MC18;
 impl Version for MC18 {
-    type RANDOM = Xoroshiro128PlusPlusRandom;
+    type Random = Xoroshiro128PlusPlusRandom;
 }
 
 pub struct MC19;
 impl Version for MC19 {
-    type RANDOM = Xoroshiro128PlusPlusRandom;
+    type Random = Xoroshiro128PlusPlusRandom;
 
     fn inv_sqrt(x: f64) -> f64 {
         x.sqrt().recip()
