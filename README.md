@@ -52,6 +52,12 @@ This programs helps find high density clusters of geodes and budding amethyst in
 
     Example: `./geode-finder.exe -r 10000 -g 22 -b 850 --threads 0` will search a 10000 chunk radius around (0, 0) to find 13x13 (`--loaded-radius` \* 2 + 1) clusters that have at least 22 geodes at 850 budding amethyst using all available threads on your machine.
 
+    You may only want a very small region to run a farm continuously via chunkloading or other means.
+
+    `./geode-finder.exe -r 100 --loaded-radius 0 -g 1 -b 80` will find all geodes with greater than 80 budding amethyst in a 100 chunk radius.
+
+    `./geode-finder.exe -r 100 --loaded-radius 1 -g 3 -b 160` will find all 3x3 clusters with greater than 160 budding amethyst in a 100 chunk radius.
+
 1. The program will find all valid geode clusters at the beginning, then check if each cluster will meet the budding amethyst threshold. It will print the clusters out and save them to file selected by `--output-path`.
 
 1. If you have Carpet mod installed, I've included a helper script to facilitate world pregeneration. Copy your output file to `[world]/scripts/shared/output.json` and place `geodegen.sc` inside the `[worldname]/scripts` directory. Load the script and begin the search with `./geodegen`.

@@ -70,7 +70,7 @@ struct Args {
     threads: usize,
 
     /// Random tickable radius
-    #[arg(long, default_value_t = Self::default().loaded_radius, value_parser = value_parser!(u8).range(3..=64))]
+    #[arg(long, default_value_t = Self::default().loaded_radius, value_parser = value_parser!(u8).range(0..=64))]
     loaded_radius: u8,
 
     /// Search center chunk x
