@@ -24,7 +24,7 @@ impl Block {
 }
 
 pub trait Random {
-    const FLOAT_MULTIPLIER: f32 = 1.0 / (1 << 24) as f32;
+    const FLOAT_MULTIPLIER: f32 = 1.0 / (1u32 << 24) as f32;
     const DOUBLE_MULTIPLIER: f64 = 1.0 / (1u64 << 53) as f64;
 
     fn new(seed: i64) -> Self;
@@ -83,17 +83,16 @@ pub struct Xoroshiro128PlusPlusRandom {
 }
 
 impl Xoroshiro128PlusPlusRandom {
-    const GOLDEN_RATIO: i64 = 0x9E37_79B9_7F4A_7C15_u64.cast_signed();
-    const SILVER_RATIO: i64 = 0x6A09_E667_F3BC_C909_u64.cast_signed();
+    const GOLDEN_RATIO: i64 = 0x9E37_79B9_7F4A_7C15_u64.cast_signed(); // -7046029254386353131
+    const SILVER_RATIO: i64 = 0x6A09_E667_F3BC_C909_u64.cast_signed(); //  7640891576956012809
 
-    const STAFFORD_1: u64 = 0xBF58_476D_1CE4_E5B9;
-    const STAFFORD_2: u64 = 0x94D0_49BB_1331_11EB;
+    const STAFFORD_MIX13_1: u64 = 0xBF58_476D_1CE4_E5B9;
+    const STAFFORD_MIX13_2: u64 = 0x94D0_49BB_1331_11EB;
 
-    // splitmix64
-    const fn mix_stafford_13(z: i64) -> i64 {
+    const fn splitmix64(z: i64) -> i64 {
         let mut z = z.cast_unsigned();
-        z = (z ^ z.wrapping_shr(30)).wrapping_mul(Self::STAFFORD_1);
-        z = (z ^ z.wrapping_shr(27)).wrapping_mul(Self::STAFFORD_2);
+        z = (z ^ z.wrapping_shr(30)).wrapping_mul(Self::STAFFORD_MIX13_1);
+        z = (z ^ z.wrapping_shr(27)).wrapping_mul(Self::STAFFORD_MIX13_2);
         (z ^ z.wrapping_shr(31)).cast_signed()
     }
 }
@@ -111,8 +110,9 @@ impl Random for Xoroshiro128PlusPlusRandom {
     fn set_seed(&mut self, seed: i64) {
         let seed_lo = seed ^ Self::SILVER_RATIO;
         let seed_hi = seed_lo.wrapping_add(Self::GOLDEN_RATIO);
-        self.seed_lo = Self::mix_stafford_13(seed_lo);
-        self.seed_hi = Self::mix_stafford_13(seed_hi);
+
+        self.seed_lo = Self::splitmix64(seed_lo);
+        self.seed_hi = Self::splitmix64(seed_hi);
     }
 
     fn next_bits(&mut self, bits: u32) -> i32 {
@@ -129,8 +129,8 @@ impl Random for Xoroshiro128PlusPlusRandom {
         let mut seed_lo = seed ^ Self::SILVER_RATIO;
         let mut seed_hi = seed_lo.wrapping_add(Self::GOLDEN_RATIO);
 
-        seed_lo = Self::mix_stafford_13(seed_lo);
-        seed_hi = Self::mix_stafford_13(seed_hi);
+        seed_lo = Self::splitmix64(seed_lo);
+        seed_hi = Self::splitmix64(seed_hi);
 
         let result = seed_lo
             .wrapping_add(seed_hi)
@@ -148,14 +148,14 @@ pub struct JavaRandom {
 
 impl JavaRandom {
     const MOD_BITS: u32 = 48;
-    const MODULUS: i64 = 0xFFFF_FFFF_FFFF;
+    const MOD_MASK: i64 = 0xFFFF_FFFF_FFFF;
     const MULTIPLIER: i64 = 0x5DEECE66D;
     const INCREMENT: i64 = 11;
-    // Java "octave_-4".hashCode()
-    const HASH: i64 = 440898198;
 
     pub fn fork_from_hash(&mut self) -> Self {
-        Self::new(Self::HASH ^ self.next_long())
+        // Java "octave_-4".hashCode()
+        const HASH: i64 = 440898198;
+        Self::new(HASH ^ self.next_long())
     }
 }
 
@@ -167,17 +167,17 @@ impl Random for JavaRandom {
     }
 
     fn set_seed(&mut self, seed: i64) {
-        self.seed = seed ^ Self::MULTIPLIER & Self::MODULUS;
+        self.seed = seed ^ Self::MULTIPLIER & Self::MOD_MASK;
     }
 
     fn next_bits(&mut self, bits: u32) -> i32 {
-        self.seed = (self.seed.wrapping_mul(Self::MULTIPLIER) + Self::INCREMENT) & Self::MODULUS;
+        self.seed = (self.seed.wrapping_mul(Self::MULTIPLIER) + Self::INCREMENT) & Self::MOD_MASK;
         self.seed.wrapping_shr(Self::MOD_BITS - bits) as i32
     }
 
     fn next_seed_bits(seed: i64, bits: u32) -> i32 {
-        let mut seed = seed ^ Self::MULTIPLIER & Self::MODULUS;
-        seed = (seed.wrapping_mul(Self::MULTIPLIER) + Self::INCREMENT) & Self::MODULUS;
+        let mut seed = seed ^ Self::MULTIPLIER & Self::MOD_MASK;
+        seed = (seed.wrapping_mul(Self::MULTIPLIER) + Self::INCREMENT) & Self::MOD_MASK;
         seed.wrapping_shr(Self::MOD_BITS - bits) as i32
     }
 }
