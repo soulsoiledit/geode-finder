@@ -186,14 +186,18 @@ impl Random for JavaRandom {
     }
 
     fn next_bits(&mut self, bits: u32) -> i32 {
-        self.seed = (self.seed.wrapping_mul(Self::MULTIPLIER) + Self::INCREMENT) & Self::MOD_MASK;
-        self.seed.wrapping_shr(Self::MOD_BITS - bits) as i32
+        self.seed = (self
+            .seed
+            .wrapping_mul(Self::MULTIPLIER)
+            .wrapping_add(Self::INCREMENT))
+            & Self::MOD_MASK;
+        self.seed.wrapping_shr(Self::MOD_BITS.wrapping_sub(bits)) as i32
     }
 
     fn next_seed_bits(seed: i64, bits: u32) -> i32 {
-        let mut seed = seed ^ Self::MULTIPLIER & Self::MOD_MASK;
-        seed = (seed.wrapping_mul(Self::MULTIPLIER) + Self::INCREMENT) & Self::MOD_MASK;
-        seed.wrapping_shr(Self::MOD_BITS - bits) as i32
+        let mut next_seed = (seed ^ Self::MULTIPLIER) & Self::MOD_MASK;
+        next_seed = (next_seed.wrapping_mul(Self::MULTIPLIER) + Self::INCREMENT) & Self::MOD_MASK;
+        next_seed.wrapping_shr(Self::MOD_BITS.wrapping_sub(bits)) as i32
     }
 }
 
