@@ -66,7 +66,7 @@ struct SharedSearchConfig {
 
 const PROGRESS_INTERVAL: usize = 64;
 fn search_geodes_tile<V: Version>(
-    shared: SharedSearchConfig,
+    shared: &SharedSearchConfig,
     start_x: i64,
     end_x: i64,
 ) -> Vec<GeodeCluster> {
@@ -85,7 +85,7 @@ fn search_geodes_tile<V: Version>(
     let chunk_history_reset = chunk_history.len();
     let mut cluster_count = 0;
 
-    for (idz, z) in shared.z_range.enumerate() {
+    for (idz, z) in shared.z_range.clone().enumerate() {
         let center_z = z - loaded_radius;
         let scaled_z = geode.scale_z(z);
 
@@ -94,7 +94,8 @@ fn search_geodes_tile<V: Version>(
         let chunk_history_slice =
             &mut chunk_history[chunk_history_index..chunk_history_index + tile_width];
 
-        for (idx, x) in (start_x..end_x).enumerate() {
+        for idx in 0..tile_width {
+            let x = start_x + idx as i64;
             let is_geode = u8::from(geode.check_fast(x, scaled_z));
 
             let old_geode = chunk_history_slice[idx];
@@ -189,15 +190,6 @@ fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
         })
     };
 
-    let shared = SharedSearchConfig {
-        seed: args.seed,
-        loaded_radius,
-        geode_threshold,
-        progress_position,
-        total_clusters,
-        z_range: start_z..end_z,
-    };
-
     let chunk_size = search_diameter.div_ceil(args.threads) as i64;
     let geodes: Vec<GeodeCluster> = (0..args.threads)
         .into_par_iter()
@@ -208,7 +200,15 @@ fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
             }
             let tile_end_x = (tile_start_x + chunk_size + loaded_diameter).min(end_x);
 
-            search_geodes_tile::<V>(shared.clone(), tile_start_x, tile_end_x)
+            let shared = SharedSearchConfig {
+                seed: args.seed,
+                loaded_radius,
+                geode_threshold,
+                progress_position: progress_position.clone(),
+                total_clusters: total_clusters.clone(),
+                z_range: start_z..end_z,
+            };
+            search_geodes_tile::<V>(&shared, tile_start_x, tile_end_x)
         })
         .collect();
 
