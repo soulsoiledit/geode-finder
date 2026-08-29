@@ -83,15 +83,17 @@ fn search_geodes_tile<V: Version>(
 
     let mut chunk_history_index = 0;
     let chunk_history_reset = chunk_history.len();
+    let mut cluster_count = 0;
+
     for (idz, z) in shared.z_range.enumerate() {
         let center_z = z - loaded_radius;
         let scaled_z = geode.scale_z(z);
 
+        let mut geode_count = 0;
         // Slice here to keep current row in cache
         let chunk_history_slice =
             &mut chunk_history[chunk_history_index..chunk_history_index + tile_width];
 
-        let mut geode_count = 0;
         for (idx, x) in (start_x..end_x).enumerate() {
             let is_geode = u8::from(geode.check_fast(x, scaled_z));
 
@@ -110,7 +112,7 @@ fn search_geodes_tile<V: Version>(
                     center_z,
                     geode_count,
                 });
-                shared.total_clusters.fetch_add(1, Ordering::Relaxed);
+                cluster_count += 1;
             }
         }
 
@@ -123,6 +125,13 @@ fn search_geodes_tile<V: Version>(
             shared
                 .progress_position
                 .fetch_add(u64::from(PROGRESS_INTERVAL), Ordering::Relaxed);
+
+            if cluster_count > 0 {
+                shared
+                    .total_clusters
+                    .fetch_add(cluster_count, Ordering::Relaxed);
+                cluster_count = 0;
+            }
         }
     }
 
