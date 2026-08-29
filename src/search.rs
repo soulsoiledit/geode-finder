@@ -64,7 +64,7 @@ struct SharedSearchConfig {
     z_range: Range<i64>,
 }
 
-const PROGRESS_INTERVAL: u16 = 256;
+const PROGRESS_INTERVAL: usize = 64;
 fn search_geodes_tile<V: Version>(
     shared: SharedSearchConfig,
     start_x: i64,
@@ -121,10 +121,10 @@ fn search_geodes_tile<V: Version>(
             chunk_history_index = 0;
         }
 
-        if idz % usize::from(PROGRESS_INTERVAL) == 0 {
+        if idz % PROGRESS_INTERVAL == 0 {
             shared
                 .progress_position
-                .fetch_add(u64::from(PROGRESS_INTERVAL), Ordering::Relaxed);
+                .fetch_add(PROGRESS_INTERVAL as u64, Ordering::Relaxed);
 
             if cluster_count > 0 {
                 shared
