@@ -58,8 +58,8 @@ struct Args {
     search_radius: u32,
 
     /// Minimum number of geodes per loaded area
-    #[arg(short, long, default_value_t = Self::default().geode_threshold, value_parser = value_parser!(u32).range(1..))]
-    geode_threshold: u32,
+    #[arg(short, long, default_value_t = Self::default().geode_threshold, value_parser = value_parser!(i16).range(1..))]
+    geode_threshold: i16,
 
     /// Minimum number of budding amethyst per loaded area
     #[arg(short, long, default_value_t = Self::default().budding_threshold, value_parser = value_parser!(u32).range(1..))]
