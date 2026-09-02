@@ -16,6 +16,7 @@ use std::{
 
 use anyhow::Result;
 use indicatif::{ProgressBar, ProgressStyle};
+use multiversion::multiversion;
 use rayon::{
     ThreadPool, ThreadPoolBuilder,
     iter::{IntoParallelIterator, ParallelIterator},
@@ -27,7 +28,7 @@ use crate::{Args, geode::Geode, version::Version};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub struct GeodeCluster {
-    geode_count: u32,
+    geode_count: i16,
     center_x: i64,
     center_z: i64,
 }
@@ -35,7 +36,7 @@ pub struct GeodeCluster {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 pub struct BuddingCluster {
     budding_count: u32,
-    geode_count: u32,
+    geode_count: i16,
     center_x: i64,
     center_z: i64,
 }
@@ -58,18 +59,28 @@ fn build_configured_pool(threads: usize) -> Result<ThreadPool> {
 struct SharedSearchConfig {
     seed: i64,
     loaded_radius: u8,
-    geode_threshold: u32,
+    geode_threshold: i16,
     progress_position: Arc<AtomicU64>,
     total_clusters: Arc<AtomicU64>,
     z_range: Range<i64>,
 }
 
-const PROGRESS_INTERVAL: usize = 64;
+#[expect(
+    rust_analyzer::inactive_code,
+    reason = "override multiversion attribute"
+)]
+#[multiversion(targets(
+    "x86_64+avx2+fma+bmi1+bmi2+lzcnt",
+    "x86_64+avx512f+avx512bw+avx512cd+avx512dq+avx512vl",
+    "aarch64+neon"
+))]
 fn search_geodes_tile<V: Version>(
     shared: &SharedSearchConfig,
     start_x: i64,
     end_x: i64,
 ) -> Vec<GeodeCluster> {
+    const PROGRESS_INTERVAL: usize = 64;
+
     let geode = Geode::<V>::new(shared.seed);
     let mut clusters: Vec<GeodeCluster> = Vec::with_capacity(256);
 
@@ -77,9 +88,9 @@ fn search_geodes_tile<V: Version>(
     let loaded_diameter = usize::from(shared.loaded_radius) * 2 + 1;
 
     let tile_width = (end_x - start_x) as usize;
-    let mut chunk_history: Vec<u8> = vec![0; tile_width * loaded_diameter];
+    let mut chunk_history: Vec<i16> = vec![Default::default(); tile_width * loaded_diameter];
     // Add loaded_diameter to accomodate buffer zone and index without branch later
-    let mut column_history: Vec<u32> = vec![0; tile_width + loaded_diameter];
+    let mut column_history: Vec<i16> = vec![0; tile_width + loaded_diameter];
 
     let mut chunk_history_index = 0;
     let chunk_history_reset = chunk_history.len();
@@ -89,27 +100,22 @@ fn search_geodes_tile<V: Version>(
         let center_z = z - loaded_radius;
         let scaled_z = geode.scale_z(z);
 
-        let mut geode_count = 0;
         // Slice here to keep current row in cache
         let chunk_history_slice =
             &mut chunk_history[chunk_history_index..chunk_history_index + tile_width];
-
         for idx in 0..tile_width {
             let x = start_x + idx as i64;
-            let is_geode = u8::from(geode.check_fast(x, scaled_z));
-
-            let old_geode = chunk_history_slice[idx];
+            let is_geode = i16::from(geode.check_fast(x, scaled_z));
+            column_history[idx + loaded_diameter] += is_geode - chunk_history_slice[idx];
             chunk_history_slice[idx] = is_geode;
+        }
 
-            let new_column =
-                column_history[idx + loaded_diameter] + u32::from(is_geode) - u32::from(old_geode);
-            column_history[idx + loaded_diameter] = new_column;
-
-            geode_count += new_column;
-            geode_count -= column_history[idx];
+        let mut geode_count = 0;
+        for idx in 0..tile_width {
+            geode_count += column_history[idx + loaded_diameter] - column_history[idx];
             if geode_count >= shared.geode_threshold {
                 clusters.push(GeodeCluster {
-                    center_x: x - loaded_radius,
+                    center_x: (start_x + idx as i64) - loaded_radius,
                     center_z,
                     geode_count,
                 });
@@ -141,11 +147,8 @@ fn search_geodes_tile<V: Version>(
 
 fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
     let search_radius = args.search_radius as usize;
-    let loaded_radius = args.loaded_radius;
-    let geode_threshold = args.geode_threshold;
-
     let search_diameter = search_radius * 2 + 1;
-    let loaded_diameter = i64::from(loaded_radius) * 2 + 1;
+    let loaded_diameter = i64::from(args.loaded_radius) * 2 + 1;
 
     let start_x = args.center_x - i64::from(args.search_radius);
     let start_z = args.center_z - i64::from(args.search_radius);
@@ -198,12 +201,12 @@ fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
             if tile_start_x >= end_x {
                 return Vec::new();
             }
-            let tile_end_x = (tile_start_x + chunk_size + loaded_diameter).min(end_x);
+            let tile_end_x = (tile_start_x + chunk_size + loaded_diameter - 1).min(end_x);
 
             let shared = SharedSearchConfig {
                 seed: args.seed,
-                loaded_radius,
-                geode_threshold,
+                loaded_radius: args.loaded_radius,
+                geode_threshold: args.geode_threshold,
                 progress_position: progress_position.clone(),
                 total_clusters: total_clusters.clone(),
                 z_range: start_z..end_z,

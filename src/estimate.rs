@@ -2,7 +2,7 @@ use crate::{Args, WORLD_BORDER, version::Version};
 
 /// P(X >= threshold)
 // Poisson provides a close enough approximation (n >= 49 > 20, p = 1/24 or 1/53 <= 0.05)
-fn poisson_tail(trials: f64, probability: f64, threshold: u32) -> f64 {
+fn poisson_tail(trials: f64, probability: f64, threshold: i16) -> f64 {
     if threshold == 0 {
         return 1.0;
     }
@@ -36,8 +36,8 @@ pub fn estimate_clusters<V: Version>(args: &Args) {
     let geode_cluster_chance = poisson_tail(loaded_area, probability, args.geode_threshold);
     let expected_geode_clusters = (search_area * geode_cluster_chance).floor();
 
-    let required_geodes = (f64::from(args.budding_threshold) / AVERAGE_BUDDING).ceil() as u32;
-    let budding_cluster_chance = poisson_tail(loaded_area, probability, required_geodes);
+    let required_geodes = (f64::from(args.budding_threshold) / AVERAGE_BUDDING).ceil();
+    let budding_cluster_chance = poisson_tail(loaded_area, probability, required_geodes as i16);
     let expected_budding_clusters = (search_area * budding_cluster_chance)
         .floor()
         .min(expected_geode_clusters);
