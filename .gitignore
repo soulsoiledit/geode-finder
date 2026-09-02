@@ -19,3 +19,8 @@
 !extra/
 !extra/geodegen.sc
 !extra/Geode.java
+
+# actions
+!.github/
+!.github/workflows/
+!.github/workflows/build.yml
