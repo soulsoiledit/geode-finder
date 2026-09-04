@@ -70,6 +70,7 @@ struct SharedSearchConfig {
     reason = "override multiversion attribute"
 )]
 #[multiversion(targets(
+    "x86_64+sse4.2+popcnt",
     "x86_64+avx2+fma+bmi1+bmi2+lzcnt",
     "x86_64+avx512f+avx512bw+avx512cd+avx512dq+avx512vl",
     "aarch64+neon"
