@@ -21,7 +21,7 @@ fn poisson_tail(trials: f64, probability: f64, threshold: i16) -> f64 {
 
 pub fn estimate_clusters<V: Version>(args: &Args) {
     // Determined empirically
-    const AVERAGE_BUDDING: f64 = 35.875;
+    const AVERAGE_BUDDING: f64 = 36.0;
 
     let loaded_area = f64::from(args.loaded_radius).mul_add(2.0, 1.0).powi(2);
     let search_area = {
