@@ -317,11 +317,12 @@ pub fn search<V: Version>(args: &Args) -> Result<Vec<BuddingCluster>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{VersionArgument, version::MC19};
+
+    use crate::{VersionArgument, version::MC194};
 
     fn test_args() -> Args {
         Args {
-            minecraft_version: VersionArgument::MC19,
+            minecraft_version: VersionArgument::MC194,
             output_path: None,
             ..Default::default()
         }
@@ -331,7 +332,7 @@ mod tests {
     fn search_geodes() -> Result<()> {
         let args = &test_args();
         let pool = build_configured_pool(args.threads)?;
-        let clusters = pool.install(|| super::search_geodes::<MC19>(args))?;
+        let clusters = pool.install(|| super::search_geodes::<MC194>(args))?;
 
         assert_eq!(clusters.len(), 189);
         assert_eq!(clusters.iter().max().map_or(0, |c| c.geode_count), 23);
@@ -340,7 +341,7 @@ mod tests {
 
     #[test]
     fn search() -> Result<()> {
-        let clusters = super::search::<MC19>(&test_args())?;
+        let clusters = super::search::<MC194>(&test_args())?;
         assert_eq!(clusters.len(), 40);
         assert_eq!(clusters.iter().max().map_or(0, |c| c.budding_count), 911);
         Ok(())

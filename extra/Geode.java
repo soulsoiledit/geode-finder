@@ -3,7 +3,6 @@
 
 package geode;
 
-import it.unimi.dsi.fastutil.doubles.DoubleList;
 import java.lang.reflect.Field;
 import java.lang.reflect.Proxy;
 import java.util.List;
@@ -23,10 +22,11 @@ import net.minecraft.world.level.biome.FeatureSorter.StepFeatureData;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.chunk.ChunkGenerator;
-import net.minecraft.world.level.levelgen.LegacyRandomSource;
 import net.minecraft.world.level.levelgen.WorldgenRandom;
-import net.minecraft.world.level.levelgen.XoroshiroRandomSource;
+import net.minecraft.world.level.levelgen.WorldgenRandom.Algorithm;
+import net.minecraft.world.level.levelgen.placement.FeaturePlacer;
 import net.minecraft.world.level.levelgen.placement.PlacedFeature;
+import net.minecraft.world.level.levelgen.synth.Noise;
 import net.minecraft.world.level.levelgen.synth.NormalNoise;
 import net.minecraft.world.level.levelgen.synth.PerlinNoise;
 import org.slf4j.Logger;
@@ -65,7 +65,7 @@ public class Geode implements ModInitializer {
 
   private static void testRandom() {
     LOGGER.info("Random:");
-    WorldgenRandom random = new WorldgenRandom(new LegacyRandomSource(SEED));
+    WorldgenRandom random = new WorldgenRandom(Algorithm.LEGACY.newInstance(SEED));
     LOGGER.info("  nextInt power-of-2: {}", random.nextInt(256));
     LOGGER.info("  nextInt non power-of-2: {}", random.nextInt(192));
     LOGGER.info("  nextBetween: {}", Mth.randomBetweenInclusive(random, 192, 256));
@@ -78,7 +78,7 @@ public class Geode implements ModInitializer {
 
   private static void testJavaRandom() {
     LOGGER.info("Java Random:");
-    WorldgenRandom random = new WorldgenRandom(new LegacyRandomSource(SEED));
+    WorldgenRandom random = new WorldgenRandom(Algorithm.LEGACY.newInstance(SEED));
 
     int bits = 0;
     for (int i = 0; i < 256; i++) {
@@ -93,7 +93,7 @@ public class Geode implements ModInitializer {
 
   private static void testXoroshiro128Random() {
     LOGGER.info("Xoroshiro128++:");
-    WorldgenRandom random = new WorldgenRandom(new XoroshiroRandomSource(SEED));
+    WorldgenRandom random = new WorldgenRandom(Algorithm.XOROSHIRO.newInstance(SEED));
 
     int bits = 0;
     for (int i = 0; i < 256; i++) {
@@ -103,13 +103,11 @@ public class Geode implements ModInitializer {
   }
 
   private static void testPerlinNoise() {
-    PerlinNoise perlin =
-        PerlinNoise.createLegacyForLegacyNetherBiome(
-            new WorldgenRandom(new LegacyRandomSource(SEED)), 0, DoubleList.of(1.0));
+    PerlinNoise perlin = new PerlinNoise(new WorldgenRandom(Algorithm.LEGACY.newInstance(SEED)));
     LOGGER.info("Perlin Noise:");
-    LOGGER.info("  0: {}", perlin.getValue(0.0, 0.0, 0.0));
-    LOGGER.info("  -half: {}", perlin.getValue(-0.5, -0.5, -0.5));
-    LOGGER.info("  wb: {}", perlin.getValue(-29_999_999.5, 64.25, 29_999_999.125));
+    LOGGER.info("  0: {}", perlin.get(0.0, 0.0, 0.0));
+    LOGGER.info("  -half: {}", perlin.get(-0.5, -0.5, -0.5));
+    LOGGER.info("  wb: {}", perlin.get(-29_999_999.5, 64.25, 29_999_999.125));
   }
 
   private static void testNormalNoise() {
@@ -121,12 +119,12 @@ public class Geode implements ModInitializer {
     double input_factor = 1.0181268882175227;
     double scale = 1.0 / (frequency * input_factor);
 
-    NormalNoise noise =
-        NormalNoise.create(new WorldgenRandom(new LegacyRandomSource(SEED)), octave, amplitude);
+    Noise noise =
+        NormalNoise.createParity(-4, 1.0).create(new WorldgenRandom(Algorithm.LEGACY.newInstance(SEED)));
     LOGGER.info("Normal Noise:");
-    LOGGER.info("  0: {}", noise.getValue(0.0, 0.0, 0.0));
-    LOGGER.info("  -1: {}", noise.getValue(-scale, -scale, -scale));
-    LOGGER.info("  mix: {}", noise.getValue(0.5 * scale, 0.25 * scale, 0.125 * scale));
+    LOGGER.info("  0: {}", noise.get(0.0, 0.0, 0.0));
+    LOGGER.info("  -1: {}", noise.get(-scale, -scale, -scale));
+    LOGGER.info("  mix: {}", noise.get(0.5 * scale, 0.25 * scale, 0.125 * scale));
   }
 
   private static <T> Registry<T> lookupRegistry(MinecraftServer server, String registryName) {
@@ -173,8 +171,9 @@ public class Geode implements ModInitializer {
   private static void testGeode(MinecraftServer server) {
     LOGGER.info("Geode:");
     WorldGenLevel world = fakeWorld(server);
-    WorldgenRandom random = new WorldgenRandom(new XoroshiroRandomSource(SEED));
+    WorldgenRandom random = new WorldgenRandom(Algorithm.XOROSHIRO.newInstance(SEED));
     ChunkGenerator generator = server.overworld().getChunkSource().getGenerator();
+    FeaturePlacer placer = new FeaturePlacer(world, generator);
     PlacedFeature geode = lookup(server, "worldgen/placed_feature", "amethyst_geode");
 
     int[] salt = getSalt(server);
@@ -184,7 +183,7 @@ public class Geode implements ModInitializer {
         BlockPos blockPos = new BlockPos(x * 16, 0, z * 16);
         long l = random.setDecorationSeed(SEED, blockPos.getX(), blockPos.getZ());
         random.setFeatureSeed(l, salt[1], salt[0]);
-        if (geode.placeWithBiomeCheck(world, generator, random, blockPos)) {
+        if (placer.placeWithBiomeCheck(geode, random, blockPos)) {
           GEODE_COUNT.incrementAndGet();
         }
       }

@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+- Adds 26.3 support
+- 1.18 and 1.19 have been split into 3 versions: 1.18-1.18.1, 1.18.2-1.19.3, and 1.19.4-26.2
+    - The first one is new, while the latter two reflect the previous 1.18 and 1.19 options respectively
 - Adds more targets for SIMD acceleration and more complete use of instruction sets
 - Reduce memory usage almost back down to [v2.2.0]
 - Reduce runtime for 1.17 by about 20% and 1.18+ by 5%

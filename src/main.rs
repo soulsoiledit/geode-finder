@@ -13,7 +13,7 @@ use clap::{Parser, ValueEnum, ValueHint, value_parser};
 use crate::{
     estimate::estimate_clusters,
     search::search,
-    version::{MC17, MC18, MC19},
+    version::{MC17, MC18, MC182, MC194, MC263},
 };
 
 const WORLD_BORDER: i64 = 30_000_000 / 16;
@@ -21,17 +21,25 @@ const BORDER_RANGE: RangeInclusive<i64> = -WORLD_BORDER..=WORLD_BORDER;
 
 #[derive(Debug, Clone, Copy, ValueEnum)]
 enum VersionArgument {
-    /// 1.17
+    /// 1.17-1.17.1
     #[clap(name = "1.17")]
     MC17,
 
-    /// 1.18
+    /// 1.18-1.18.1
     #[clap(name = "1.18")]
     MC18,
 
-    /// 1.19+
-    #[clap(name = "1.19")]
-    MC19,
+    /// 1.18.2-1.19.3
+    #[clap(name = "1.18.2")]
+    MC182,
+
+    /// 1.19.4-26.2
+    #[clap(name = "1.19.4")]
+    MC194,
+
+    /// 26.3+
+    #[clap(name = "26.3")]
+    MC263,
 }
 
 fn thread_parser(threads_str: &str) -> Result<usize> {
@@ -97,7 +105,7 @@ impl Args {
 impl Default for Args {
     fn default() -> Self {
         Self {
-            minecraft_version: VersionArgument::MC19,
+            minecraft_version: VersionArgument::MC263,
             seed: 0,
             search_radius: 1000,
             geode_threshold: 20,
@@ -119,14 +127,18 @@ fn main() -> Result<()> {
     if args.estimate {
         match version {
             VersionArgument::MC17 => estimate_clusters::<MC17>(args),
-            VersionArgument::MC18 => estimate_clusters::<MC18>(args),
-            VersionArgument::MC19 => estimate_clusters::<MC19>(args),
+            VersionArgument::MC18
+            | VersionArgument::MC182
+            | VersionArgument::MC194
+            | VersionArgument::MC263 => estimate_clusters::<MC18>(args),
         }
     } else {
         match version {
             VersionArgument::MC17 => search::<MC17>(args),
             VersionArgument::MC18 => search::<MC18>(args),
-            VersionArgument::MC19 => search::<MC19>(args),
+            VersionArgument::MC182 => search::<MC182>(args),
+            VersionArgument::MC194 => search::<MC194>(args),
+            VersionArgument::MC263 => search::<MC263>(args),
         }?;
     }
 

@@ -1,5 +1,5 @@
 use crate::{
-    math::{Block, Random},
+    math::{Block, JavaRandom, Random},
     noise::NormalNoise,
     version::Version,
 };
@@ -14,7 +14,7 @@ pub struct Geode<V: Version> {
     x_scale: i64,
     z_scale: i64,
     random: V::Random,
-    noise: NormalNoise,
+    noise: NormalNoise<V>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -26,7 +26,7 @@ impl<V: Version> Geode<V> {
 
     pub fn new(seed: i64) -> Self {
         let mut random = V::Random::new(seed);
-        let noise = V::new_normal_noise(seed);
+        let noise = V::new_normal_noise(&mut JavaRandom::new(seed), V::OCTAVE, V::AMPLITUDE);
         Self {
             seed,
             x_scale: (random.next_long() | 1).wrapping_mul(16),
@@ -112,7 +112,7 @@ impl<V: Version> Geode<V> {
                     let xf = f64::from(x);
                     let block = Block::new(x, y, z);
 
-                    let noise_offset = self.noise.get(xf, yf, zf) * V::NOISE_MULTIPLIER;
+                    let noise_offset: f64 = self.noise.get(xf, yf, zf).into() * V::NOISE_MULTIPLIER;
 
                     let mut shell_sum = 0.0;
                     for &(point, offset) in &points {
@@ -152,7 +152,7 @@ impl<V: Version> Geode<V> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::version::{MC17, MC18, MC19};
+    use crate::version::{MC17, MC18, MC182, MC194, MC263};
 
     #[derive(Debug, Clone, Copy)]
     struct ExpectedGeode {
@@ -204,13 +204,29 @@ mod tests {
     fn generate_18() {
         generate::<MC18>(ExpectedGeode {
             geode_count: 158,
+            budding_count: 5732,
+        });
+    }
+
+    #[test]
+    fn generate_18_2() {
+        generate::<MC182>(ExpectedGeode {
+            geode_count: 158,
             budding_count: 5722,
         });
     }
 
     #[test]
-    fn generate_19() {
-        generate::<MC19>(ExpectedGeode {
+    fn generate_19_4() {
+        generate::<MC194>(ExpectedGeode {
+            geode_count: 158,
+            budding_count: 5736,
+        });
+    }
+
+    #[test]
+    fn generate_26_3() {
+        generate::<MC263>(ExpectedGeode {
             geode_count: 158,
             budding_count: 5736,
         });
