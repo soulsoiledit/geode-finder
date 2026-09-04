@@ -19,77 +19,47 @@
         "aarch64-darwin"
       ];
       forAllSystems =
-        f: nixpkgs.lib.genAttrs supportedSystems (system: f nixpkgs.legacyPackages.${system} system);
-    in
-    {
-      packages = forAllSystems (
-        pkgs: system:
+        f: nixpkgs.lib.genAttrs supportedSystems (system: f nixpkgs.legacyPackages.${system});
+      mkCrate =
+        pkgs:
         let
           craneLib = crane.mkLib pkgs;
-
-          inherit (craneLib.crateNameFromCargoToml { cargoToml = ./Cargo.toml; }) pname version;
-          src = craneLib.cleanCargoSource ./.;
-
-          mkRustPackage =
-            {
-              lib,
-              suffix ? "",
-              postInstall ? "",
-            }:
-            let
-              commonArgs = {
-                inherit pname version src;
-                strictDeps = true;
-              };
-            in
-            lib.buildPackage (
-              commonArgs
-              // {
-                inherit postInstall;
-                cargoArtifacts = lib.buildDepsOnly commonArgs;
-                pname = "${pname}-${suffix}";
-              }
-            );
+          commonArgs = {
+            src = craneLib.cleanCargoSource ./.;
+            strictDeps = true;
+          };
         in
         {
-          nix = mkRustPackage { lib = craneLib; };
+          inherit craneLib;
+          crate = craneLib.buildPackage (
+            commonArgs
+            // {
+              cargoArtifacts = craneLib.buildDepsOnly commonArgs;
+            }
+          );
+        };
+    in
+    {
+      checks = forAllSystems (pkgs: {
+        inherit (mkCrate pkgs) crate;
+      });
 
-          static = mkRustPackage {
-            lib = crane.mkLib pkgs.pkgsStatic;
-            suffix = "static";
-            postInstall = ''
-              mv $out/bin/${pname} $out/bin/${pname}-static
-            '';
-          };
+      packages = forAllSystems (pkgs: {
+        default = (mkCrate pkgs).crate;
+      });
 
-          windows = mkRustPackage {
-            lib = crane.mkLib pkgs.pkgsCross.mingwW64;
-            suffix = "windows";
-          };
+      devShells = forAllSystems (pkgs: {
+        default = (mkCrate pkgs).craneLib.devShell {
+          checks = self.checks.${pkgs.stdenv.hostPlatform.system};
+          packages = with pkgs; [
+            # please please please benchmark and profile
+            hyperfine
+            poop
 
-          default = self.packages.${system}.nix;
-          all = pkgs.symlinkJoin {
-            name = "${pname}-all-${version}";
-            paths = with self.packages.${system}; [
-              nix
-              static
-              windows
-            ];
-          };
-        }
-      );
-
-      devShells = forAllSystems (
-        pkgs: system: {
-          default = pkgs.mkShell {
-            packages = with pkgs; [
-              rustc
-              cargo
-              rustfmt
-              clippy
-            ];
-          };
-        }
-      );
+            perf
+            cargo-flamegraph
+          ];
+        };
+      });
     };
 }
