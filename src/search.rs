@@ -69,12 +69,7 @@ struct SharedSearchConfig {
     rust_analyzer::inactive_code,
     reason = "override multiversion attribute"
 )]
-#[multiversion(targets(
-    "x86_64+avx512f+avx512bw+avx512cd+avx512dq+avx512vl",
-    "x86_64+avx2+fma+bmi1+bmi2+lzcnt",
-    "x86_64+sse4.2+popcnt",
-    "aarch64+neon"
-))]
+#[multiversion(targets = "simd")]
 fn search_geodes_tile<V: Version>(
     shared: &SharedSearchConfig,
     start_x: i64,
