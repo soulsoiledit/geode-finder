@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+- Adds more targets for SIMD acceleration and more complete use of instruction sets
+- Reduce memory usage almost back down to [v2.2.0]
+- Reduce runtime for 1.17 by about 20% and 1.18+ by 5%
+
 ## [v2.3.1] - 2026-09-04
 
 - Fixes incorrect SIMD instruction sets being selected, fastest should now be prioritized

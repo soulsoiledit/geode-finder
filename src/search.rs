@@ -84,34 +84,41 @@ fn search_geodes_tile<V: Version>(
     let loaded_diameter = usize::from(shared.loaded_radius) * 2 + 1;
 
     let tile_width = (end_x - start_x) as usize;
-    let mut chunk_history: Vec<i16> = vec![Default::default(); tile_width * loaded_diameter];
+    let mut chunk_history: Vec<bool> = vec![false; tile_width * loaded_diameter];
     // Add loaded_diameter to accomodate buffer zone and index without branch later
     let mut column_history: Vec<i16> = vec![0; tile_width + loaded_diameter];
+    let mut column_delta: Vec<i16> = vec![0; tile_width];
 
     let mut chunk_history_index = 0;
     let chunk_history_reset = chunk_history.len();
     let mut cluster_count = 0;
 
-    for (idz, z) in shared.z_range.clone().enumerate() {
+    for (iz, z) in shared.z_range.clone().enumerate() {
         let center_z = z - loaded_radius;
         let scaled_z = geode.scale_z(z);
 
         // Slice here to keep current row in cache
         let chunk_history_slice =
             &mut chunk_history[chunk_history_index..chunk_history_index + tile_width];
-        for idx in 0..tile_width {
-            let x = start_x + idx as i64;
-            let is_geode = i16::from(geode.check_fast(x, scaled_z));
-            column_history[idx + loaded_diameter] += is_geode - chunk_history_slice[idx];
-            chunk_history_slice[idx] = is_geode;
+        for i in 0..tile_width {
+            let x = start_x + i as i64;
+            let is_geode = geode.check_fast(x, scaled_z);
+            column_history[i + loaded_diameter] +=
+                i16::from(is_geode) - i16::from(chunk_history_slice[i]);
+            chunk_history_slice[i] = is_geode;
         }
 
+        for i in 0..tile_width {
+            column_delta[i] = column_history[i + loaded_diameter] - column_history[i];
+        }
+
+        // Benches better than indexing and enumerate()
         let mut geode_count = 0;
-        for idx in 0..tile_width {
-            geode_count += column_history[idx + loaded_diameter] - column_history[idx];
+        for (i, delta) in (0..).zip(column_delta.iter()) {
+            geode_count += delta;
             if geode_count >= shared.geode_threshold {
                 clusters.push(GeodeCluster {
-                    center_x: (start_x + idx as i64) - loaded_radius,
+                    center_x: start_x + i as i64 - loaded_radius,
                     center_z,
                     geode_count,
                 });
@@ -124,7 +131,7 @@ fn search_geodes_tile<V: Version>(
             chunk_history_index = 0;
         }
 
-        if idz % PROGRESS_INTERVAL == 0 {
+        if iz % PROGRESS_INTERVAL == 0 {
             shared
                 .progress_position
                 .fetch_add(PROGRESS_INTERVAL as u64, Ordering::Relaxed);
