@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [v2.4.0] - 2026-09-15
+
 - Adds 26.3 support
 - 1.18 and 1.19 have been split into 3 versions: 1.18-1.18.1, 1.18.2-1.19.3, and 1.19.4-26.2
     - The first one is new, while the latter two reflect the previous 1.18 and 1.19 options respectively
