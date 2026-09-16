@@ -1,8 +1,8 @@
 # Changelog
 
-## [Unreleased]
+## Unreleased
 
-## [v2.4.0] - 2026-09-15
+## v2.4.0 - 2026-09-15
 
 - Adds 26.3 support
 - 1.18 and 1.19 have been split into 3 versions: 1.18-1.18.1, 1.18.2-1.19.3, and 1.19.4-26.2
@@ -11,11 +11,11 @@
 - Reduce memory usage almost back down to [v2.2.0]
 - Reduce runtime for 1.17 by about 20% and 1.18+ by 5%
 
-## [v2.3.1] - 2026-09-04
+## v2.3.1 - 2026-09-04
 
 - Fixes incorrect SIMD instruction sets being selected, fastest should now be prioritized
 
-## [v2.3.0] - 2026-09-04
+## v2.3.0 - 2026-09-04
 
 - Accelerates search with SIMD
     - This can use AVX2 (1.3-1.5x faster) and AVX-512 (1.6-2.6x faster) or fallback to SSE on x86
@@ -25,17 +25,17 @@
 - Memory usage was increased (1.6x) to facilitate new optimizations
 - Adds actions workflow and removes some Nix outputs
 
-## [v2.2.0] - 2026-08-22
+## v2.2.0 - 2026-08-22
 
 - Allows setting `--loaded-radius` down to 0 to allow searching for smaller regions (requested from siestol)
 - Micro-optimizations from `geode-viber` experiment by @worldInColors
 - Preparations for 26.3+ support
 
-## [v2.1.1] - 2026-08-16
+## v2.1.1 - 2026-08-16
 
 - Constrains search area within the world border during `--estimate` when given center coordinates
 
-## [v2.1.0] - 2026-07-28
+## v2.1.0 - 2026-07-28
 
 This updates finally adds multi-threading so you can perform your world-size searches a bit faster (maybe). I also added some minor features, fixed a few bugs, and reworked some stuff under the hood.
 
@@ -47,7 +47,7 @@ This updates finally adds multi-threading so you can perform your world-size sea
 - Removed some unnecessary dependencies to speed up builds
 - Adds a Nix flake
 
-## [v2.0.0] - 2026-03-22
+## v2.0.0 - 2026-03-22
 
 This update is partly a massive refactor/rewrite to make it easier to port to new versions should the geode placement configuration ever update in the future. The other part is a streamlined geode cluster searching algorithm that greatly improves the speed and provides flexibility for a parallelized approach in a future release.
 
@@ -59,20 +59,20 @@ This update is partly a massive refactor/rewrite to make it easier to port to ne
 - `--estimate` option calculates a rough estimate of how many clusters will be found
 - Extra unit tests and Fabric mod for validating parity
 
-## [v1.1.0] - 2025-07-14
+## v1.1.0 - 2025-07-14
 
 - Added `--random-tick-radius` argument for versions 1.21.5+ (or additional cases where you wish to have a different chunk radius). Fox example, if you wish to load all geodes within a 16 simulation distance area, pass 16 to this option. Thanks Elyrio for the reminder!
 
-## [v1.0.4] - 2024-01-23
+## v1.0.4 - 2024-01-23
 
 - Fix for negative starting chunk coordinates
 
-## [v1.0.3] - 2024-01-22
+## v1.0.3 - 2024-01-22
 
 - Fixes issues with negative seed input
 - Adds support for 1.20 (mostly negligible differences in budding amethyst placement)
 - Adds options to set starting chunk coordinates
 
-## [v1.0.0] - 2023-01-24
+## v1.0.0 - 2023-01-24
 
 - Adds searching for the largest cluster of geodes and budding amethyst in a Minecraft world
