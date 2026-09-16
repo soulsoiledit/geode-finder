@@ -32,21 +32,21 @@ This programs helps find high density clusters of geodes and budding amethyst in
 
 1. Run `./geode-finder.exe --help` or `./geode-finder --help` to view the list of options:
 
-    | **Option**                  | **Information**                                            | **Default** |
-    | --------------------------- | ---------------------------------------------------------- | ----------- |
+    | **Option**                  | **Information**                                            | **Default**              |
+    | --------------------------- | ---------------------------------------------------------- | ------------------------ |
     | `-h`, `--help`              | Shows the list of options                                  |
     | `-V`, `--version`           | Prints the version of the program                          |
-    | `-m`, `--minecraft-version` | Minecraft version to use (1.17, 1.18, or 1.19+)            | 1.19+       |
-    | `-s`, `--seed`              | Seed of your world                                         | 0           |
-    | `-r`, `--search-radius`     | Radius of chunks to search over                            | 1000        |
-    | `-g`, `--geode-threshold`   | Minimum number of geodes in a cluster                      | 20          |
-    | `-b`, `--budding-threshold` | Minimum number of budding amethyst in a cluster            | 800         |
-    | `--threads`                 | Number of threads to use (0 will use all cores)            | 1           |
-    | `--loaded-radius`           | Random tickable radius                                     | 6           |
-    | `--center-x`                | x coordinate of the center chunk                           | 0           |
-    | `--center-z`                | z coordinate of the center chunk                           | 0           |
-    | `--output-path`             | Where to save results                                      | output.json |
-    | `--estimate`                | Estimate the number of clusters without running the search | false       |
+    | `-m`, `--minecraft-version` | Minecraft version to use                                   | Latest supported version |
+    | `-s`, `--seed`              | Seed of your world                                         | 0                        |
+    | `-r`, `--search-radius`     | Radius of chunks to search over                            | 1000                     |
+    | `-g`, `--geode-threshold`   | Minimum number of geodes in a cluster                      | 20                       |
+    | `-b`, `--budding-threshold` | Minimum number of budding amethyst in a cluster            | 800                      |
+    | `--threads`                 | Number of threads to use (0 will use all cores)            | 1                        |
+    | `--loaded-radius`           | Random tickable radius                                     | 6                        |
+    | `--center-x`                | x coordinate of the center chunk                           | 0                        |
+    | `--center-z`                | z coordinate of the center chunk                           | 0                        |
+    | `--output-path`             | Where to save results                                      | output.json              |
+    | `--estimate`                | Estimate the number of clusters without running the search | false                    |
 
 1. Run the program with your selected options.
 
