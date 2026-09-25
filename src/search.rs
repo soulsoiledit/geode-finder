@@ -254,7 +254,7 @@ fn process_clusters<V: Version>(
                 if geode.check(x, z) {
                     budding_count += *cached_budding
                         .entry((x, z))
-                        .or_insert_with(|| geode.generate(x, z));
+                        .or_insert_with(|| geode.generate(x, z).unwrap_or(0));
                 }
             }
         }

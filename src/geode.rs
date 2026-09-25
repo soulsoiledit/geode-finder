@@ -58,9 +58,9 @@ impl<V: Version> Geode<V> {
         V::Random::next_seed_bits(feature_seed, 24) <= Self::CHANCE_INT
     }
 
-    pub fn generate(&mut self, chunk_x: i64, chunk_z: i64) -> u32 {
+    pub fn generate(&mut self, chunk_x: i64, chunk_z: i64) -> Option<u32> {
         if !self.check(chunk_x, chunk_z) {
-            return 0;
+            return None;
         }
 
         let origin = {
@@ -145,7 +145,7 @@ impl<V: Version> Geode<V> {
             }
         }
 
-        budding_count
+        Some(budding_count)
     }
 }
 
@@ -174,7 +174,7 @@ mod tests {
             for x in -RANGE..=RANGE {
                 geode_count += u32::from(geode.check(x, z));
                 fast_geode_count += u32::from(geode.check_fast(x, scaled_z));
-                budding_count += geode.generate(x, z);
+                budding_count += geode.generate(x, z).unwrap_or(0);
             }
         }
 
