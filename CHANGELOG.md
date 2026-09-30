@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixes duplicate outputs being shown when using multiple threads and low geode count thresholds
+
 ## v2.4.0 - 2026-09-15
 
 - Adds 26.3 support

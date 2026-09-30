@@ -114,11 +114,11 @@ fn search_geodes_tile<V: Version>(
 
         // Benches better than indexing and enumerate()
         let mut geode_count = 0;
-        for (i, delta) in (0..).zip(column_delta.iter()) {
+        for (i, delta) in (0i64..).zip(&column_delta) {
             geode_count += delta;
             if geode_count >= shared.geode_threshold {
                 clusters.push(GeodeCluster {
-                    center_x: start_x + i as i64 - loaded_radius,
+                    center_x: start_x + i - loaded_radius,
                     center_z,
                     geode_count,
                 });
@@ -151,7 +151,7 @@ fn search_geodes_tile<V: Version>(
 fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
     let search_radius = args.search_radius as usize;
     let search_diameter = search_radius * 2 + 1;
-    let loaded_diameter = i64::from(args.loaded_radius) * 2 + 1;
+    let loaded_radius = i64::from(args.loaded_radius);
 
     let start_x = args.center_x - i64::from(args.search_radius);
     let start_z = args.center_z - i64::from(args.search_radius);
@@ -197,14 +197,21 @@ fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
     };
 
     let chunk_size = search_diameter.div_ceil(args.threads) as i64;
-    let geodes: Vec<GeodeCluster> = (0..args.threads)
+    let mut geodes: Vec<GeodeCluster> = (0..args.threads)
         .into_par_iter()
         .flat_map(|i| {
-            let tile_start_x = start_x + (i as i64 * chunk_size);
+            let (tile_start_x, tile_end_x) = {
+                let tile_start_x = start_x + i as i64 * chunk_size;
+                let tile_end_x = tile_start_x + chunk_size;
+                (
+                    start_x.max(tile_start_x - loaded_radius),
+                    (tile_end_x + loaded_radius).min(end_x),
+                )
+            };
+
             if tile_start_x >= end_x {
                 return Vec::new();
             }
-            let tile_end_x = (tile_start_x + chunk_size + loaded_diameter - 1).min(end_x);
 
             let shared = SharedSearchConfig {
                 seed: args.seed,
@@ -217,6 +224,9 @@ fn search_geodes<V: Version>(args: &crate::Args) -> Result<Vec<GeodeCluster>> {
             search_geodes_tile::<V>(&shared, tile_start_x, tile_end_x)
         })
         .collect();
+    // Remove duplicated areas because it's significantly faster than a check in the loop
+    geodes.par_sort_unstable_by_key(|c| (c.center_z, c.center_x));
+    geodes.dedup_by_key(|c| (c.center_z, c.center_x));
 
     progress_bar.finish();
     tx.send(())?;
